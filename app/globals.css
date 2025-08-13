@@ -2,5 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Kleines Design-Polish */
-:root { color-scheme: dark; }
+/* kleine Defaults */
+:root {
+    color-scheme: dark;
+}
+html,
+body {
+    height: 100%;
+}

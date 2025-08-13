@@ -1,5 +1,9 @@
-export const metadata = {
+import "./globals.css";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
   title: "ProductPhotoPop",
+  description: "Hintergrund in Sekunden entfernen",
   viewport: "width=device-width, initial-scale=1",
 };
 
