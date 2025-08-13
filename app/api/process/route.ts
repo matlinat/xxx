@@ -99,9 +99,11 @@ export async function POST(req: NextRequest) {
     if (jobErr) throw jobErr;
 
     // 3) Replicate: Hintergrund entfernen (SDK)
-    const output: any = await replicate.run("cjwbw/rembg:latest", {
-      input: { image: signed.signedUrl },
-    });
+    const output: any = await replicate.run(
+      "851-labs/background-remover:latest",
+      { input: { image: signed.signedUrl } },
+    );
+
     const outputUrl = Array.isArray(output) ? output[0] : output;
     if (!outputUrl || typeof outputUrl !== "string") {
       throw new Error("Unexpected Replicate output format");
