@@ -13,13 +13,12 @@ import {
  *  ---------------------------------------------------------------- */
 type ModelSlug = `${string}/${string}` | `${string}/${string}:${string}`;
 
-// Bewährte Reihenfolge (alle public):
+// Reihenfolge: ENV (falls gesetzt) → bewährte öffentliche Modelle
 const PRIMARY_CHAIN: ModelSlug[] = [
-  // per ENV übersteuern, ansonsten diese Reihenfolge
   (process.env.REPLICATE_BG_MODEL?.trim().replace(
     /\s*:\s*/,
     ":",
-  ) as ModelSlug) || "851-labs/background-remover:latest",
+  ) as ModelSlug) || ("851-labs/background-remover:latest" as const),
   "lucataco/remove-bg:latest",
   "cjwbw/rembg:latest",
 ];
@@ -50,6 +49,19 @@ function toBuffer(bytes: Uint8Array | ArrayBuffer | Buffer): Buffer {
     : Buffer.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
 }
 
+/** ✅ FIX: Uint8Array → gültiger Blob ohne SharedArrayBuffer-Typen
+ *   Wir geben eine **View** (Uint8Array) an Blob weiter.
+ *   Falls die View nicht den vollen Buffer abdeckt, nehmen wir bytes.slice(),
+ *   damit der Blob eine saubere contiguous-View bekommt.
+ */
+function toBlob(bytes: Uint8Array, mime = "image/png"): Blob {
+  const view =
+    bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
+      ? bytes
+      : bytes.slice(0); // neue Uint8Array-View, vermeidet SharedArrayBuffer-Typunion
+  return new Blob([view], { type: mime });
+}
+
 async function compositeOnColor(
   foreground: Uint8Array | ArrayBuffer | Buffer,
   hex = "#FFFFFF",
@@ -75,11 +87,6 @@ async function compositeOnColor(
   return new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
 }
 
-/** ----------------------------------------------------------------
- *  Replicate: robust ausführen (wir senden BLOB statt URL!)
- *  - Manche Modelle zicken bei signierten URLs → Blob ist stabil.
- *  - Output wird auf String-URL normalisiert.
- *  ---------------------------------------------------------------- */
 function normalizeOutput(output: any): string {
   if (typeof output === "string") return output;
   if (Array.isArray(output) && output.length) {
@@ -105,16 +112,15 @@ function normalizeOutput(output: any): string {
   throw new Error("Unexpected Replicate output");
 }
 
+// Replicate mit Blob-Input: stabiler als URL (umgeht 422 von signierten URLs)
 async function runReplicateWithBlob(imageBytes: Uint8Array): Promise<string> {
-  // Node 18+ hat globalen Blob; MIME setzen hilft manchen Modellen
-  const blob = new Blob([imageBytes], { type: "image/png" });
+  const blob = toBlob(imageBytes, "image/png");
 
   let lastErr: unknown = null;
   for (const raw of PRIMARY_CHAIN) {
     if (!raw || !/.+\/.+/.test(raw)) continue;
     const slug = raw as ModelSlug;
     try {
-      // Die meisten BG-Modelle akzeptieren "image" als File/Blob
       const out: any = await replicate.run(slug, { input: { image: blob } });
       const url = normalizeOutput(out);
       return url;
@@ -122,7 +128,8 @@ async function runReplicateWithBlob(imageBytes: Uint8Array): Promise<string> {
       lastErr = e;
       const msg = String(e?.message || e);
       console.warn(`[Replicate] Failed for ${slug}: ${msg}`);
-      // Bei Version-Fehler: gleicher Owner/Model mit :latest probieren
+
+      // Bei Version-/Permission-Fehler → gleiches Modell mit :latest probieren
       if (
         msg.includes("Invalid version") ||
         msg.includes("not permitted") ||
@@ -178,16 +185,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1) Original von Supabase holen (signierte URL) und Bytes laden
+    // 1) Original als Bytes holen
     const signedUrl = await supabaseSignedUrl(originalPath, 10);
     const imageBytes = await fetchBytes(signedUrl);
 
-    // 2) (Optional) kleines Pre-Processing: zu PNG normalisieren (manche Modelle mögen PNG lieber)
+    // 2) (Optional) nach PNG normalisieren (robuster für die meisten Modelle)
     const pngBytes = new Uint8Array(
       await sharp(toBuffer(imageBytes)).png().toBuffer(),
     );
 
-    // 3) Replicate mit Blob-Input ausführen (kein URL-Input mehr!)
+    // 3) Hintergrund entfernen (Blob-Input)
     const cutoutUrl = await runReplicateWithBlob(pngBytes);
 
     // 4) Ergebnis holen
@@ -206,7 +213,7 @@ export async function POST(req: NextRequest) {
     }
     // "transparent": direkt speichern
 
-    // 6) Speichern
+    // 6) Job anlegen & Ergebnis speichern
     const { data: jobRow, error: jobErr } = await supabaseAdmin
       .from("ppp_jobs")
       .insert([
