@@ -1,12 +1,20 @@
 {
   "dependencies": {
+    "@supabase/supabase-js": "^2.55.0",
     "next": "^15.4.6",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "sharp": "^0.34.3",
+    "uuid": "^11.1.0",
+    "zod": "^4.0.17"
   },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start"
+  },
+  "devDependencies": {
+    "@types/react": "19.1.10",
+    "typescript": "5.9.2"
   }
 }
