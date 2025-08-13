@@ -7,21 +7,21 @@ type BgMode = "transparent" | "white" | "brand";
 export default function Page() {
   const [file, setFile] = useState<File | null>(null);
   const [bgMode, setBgMode] = useState<BgMode>("white");
-  const [brandHex, setBrandHex] = useState<string>("#ffffff");
+  const [brandHex, setBrandHex] = useState("#ffffff");
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string>("");
+  const [msg, setMsg] = useState("");
   const [jobId, setJobId] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [originalPreview, setOriginalPreview] = useState<string | null>(null);
-
   const pollRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
+    },
+    [],
+  );
 
   function onFilesSelected(files?: FileList | null) {
     const f = files?.[0];
@@ -29,39 +29,31 @@ export default function Page() {
     setFile(f);
     setResultUrl(null);
     setMsg("");
-    const reader = new FileReader();
-    reader.onload = () => setOriginalPreview(reader.result as string);
-    reader.readAsDataURL(f);
+    const r = new FileReader();
+    r.onload = () => setOriginalPreview(r.result as string);
+    r.readAsDataURL(f);
   }
 
   async function startProcess() {
-    if (!file) {
-      setMsg("Bitte zuerst ein Bild wählen.");
-      return;
-    }
+    if (!file) return setMsg("Bitte zuerst ein Bild wählen.");
     setLoading(true);
     setMsg("Upload…");
     setResultUrl(null);
 
-    // 1) signed upload holen
     const signRes = await fetch("/api/sign-upload", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filename: file.name }),
     });
-    const signJson = await signRes.json();
-    if (signJson.error) {
-      setMsg("Fehler beim Signieren: " + signJson.error);
+    const sign = await signRes.json();
+    if (sign.error) {
+      setMsg("Fehler beim Signieren: " + sign.error);
       setLoading(false);
       return;
     }
-
-    const putRes = await fetch(signJson.signedUrl, {
+    const putRes = await fetch(sign.signedUrl, {
       method: "PUT",
-      headers: {
-        "x-upsert": "true",
-        authorization: `Bearer ${signJson.token}`,
-      },
+      headers: { "x-upsert": "true", authorization: `Bearer ${sign.token}` },
       body: file,
     });
     if (!putRes.ok) {
@@ -70,49 +62,35 @@ export default function Page() {
       return;
     }
 
-    // 2) Prozess starten
     setMsg("Verarbeitung gestartet…");
     const procRes = await fetch("/api/process", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        originalPath: signJson.path,
+        originalPath: sign.path,
         bgMode,
         brandHex: bgMode === "brand" ? brandHex : undefined,
       }),
     });
-    const procJson = await procRes.json();
-    if (procJson.error) {
-      setMsg("Fehler beim Verarbeiten: " + procJson.error);
+    const proc = await procRes.json();
+    if (proc.error) {
+      setMsg("Fehler beim Verarbeiten: " + proc.error);
       setLoading(false);
       return;
     }
 
-    const id = procJson.jobId as string | undefined;
+    const id = proc.jobId as string | undefined;
     if (!id) {
-      // falls deine aktuelle process-Route schon processedPath zurückgibt:
-      if (procJson.processedPath) {
-        setMsg("Fertig ✅");
-        // signierte Download-URL über /api/status holen (optional)
-        const s = await fetch(`/api/status?id=${procJson.jobId}`).then((r) =>
-          r.json(),
-        );
-        setResultUrl(s.downloadUrl ?? null);
-        setLoading(false);
-        return;
-      }
       setMsg("Job-ID fehlt.");
       setLoading(false);
       return;
     }
-
     setJobId(id);
 
-    // 3) Status pollen
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       const s = await fetch(`/api/status?id=${id}`);
-      if (!s.ok) return; // 404/500 kurz ignorieren
+      if (!s.ok) return;
       const st = await s.json();
       if (st.status === "done" && st.downloadUrl) {
         if (pollRef.current) clearInterval(pollRef.current);
@@ -125,9 +103,11 @@ export default function Page() {
 
   return (
     <main className="mx-auto max-w-screen-sm px-4 py-6 sm:py-10">
-      {/* Header */}
       <header className="mb-6 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <span className="inline-flex items-center rounded-full bg-black px-3 py-1 text-xs font-medium text-white">
+          Tailwind aktiv ✅
+        </span>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
           ProductPhotoPop
         </h1>
         <p className="mt-2 text-sm text-gray-600">
@@ -136,7 +116,6 @@ export default function Page() {
         </p>
       </header>
 
-      {/* Upload Card */}
       <section
         onDragOver={(e) => {
           e.preventDefault();
@@ -175,7 +154,6 @@ export default function Page() {
             />
           </label>
 
-          {/* Optionen */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <select
               value={bgMode}
@@ -214,10 +192,8 @@ export default function Page() {
             </button>
           </div>
 
-          {/* Status */}
           {msg && <p className="text-sm text-gray-700">{msg}</p>}
 
-          {/* Previews */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {originalPreview && (
               <figure className="rounded-xl border border-gray-200 p-3">
@@ -254,7 +230,6 @@ export default function Page() {
         </div>
       </section>
 
-      {/* Trust / CTA unten – mobil sichtbar, Desktop dezent */}
       <footer className="mt-8 text-center text-xs text-gray-500">
         DSGVO-freundlich • In wenigen Sekunden fertig • Für Shopify, Amazon &
         Co.
