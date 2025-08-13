@@ -9,54 +9,35 @@ import {
 } from "@/lib/supabase";
 
 /** ----------------------------------------------------------------
- *  Replicate: Model-Typen, Normalisierung & Fallback-Strategie
+ *  Replicate: Modelle, Typen & Fallbacks
  *  ---------------------------------------------------------------- */
 type ModelSlug = `${string}/${string}` | `${string}/${string}:${string}`;
 
-const DEFAULT_MODEL: ModelSlug = "851-labs/background-remover:latest";
-const FALLBACK_CHAIN: ModelSlug[] = [
+// Bewährte Reihenfolge (alle public):
+const PRIMARY_CHAIN: ModelSlug[] = [
+  // per ENV übersteuern, ansonsten diese Reihenfolge
+  (process.env.REPLICATE_BG_MODEL?.trim().replace(
+    /\s*:\s*/,
+    ":",
+  ) as ModelSlug) || "851-labs/background-remover:latest",
   "lucataco/remove-bg:latest",
   "cjwbw/rembg:latest",
 ];
 
-// Einige Modelle erwarten unterschiedliche Input-Keys
-const INPUT_KEY_BY_MODEL: Array<{ match: RegExp; key: string }> = [
-  { match: /^851-labs\/background-remover/i, key: "image" },
-  { match: /^lucataco\/remove-bg/i, key: "image" },
-  { match: /^cjwbw\/rembg/i, key: "image" },
-];
-
-function normalizeModelSlug(raw?: string | null): ModelSlug {
-  if (!raw) return DEFAULT_MODEL;
-  let s = raw.trim().replace(/\s*:\s*/, ":");
-  if (!/^.+\/.+$/.test(s)) return DEFAULT_MODEL;
-  if (/:$/.test(s)) s = s + "latest";
-  return s as ModelSlug;
-}
-
-function modelToLatest(slug: ModelSlug): ModelSlug {
-  const [owner, rest] = slug.split("/") as [string, string];
-  const model = rest.split(":")[0];
-  return `${owner}/${model}:latest` as ModelSlug;
-}
-
-function pickInputKey(slug: ModelSlug): string {
-  const found = INPUT_KEY_BY_MODEL.find((r) => r.match.test(slug));
-  return found ? found.key : "image";
-}
-
-const PRIMARY_MODEL: ModelSlug = normalizeModelSlug(
-  process.env.REPLICATE_BG_MODEL,
-);
-
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN!,
-});
+const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
 
 /** ----------------------------------------------------------------
- *  Byte/Buffer Utilities
+ *  Utilities
  *  ---------------------------------------------------------------- */
-async function downloadToBytes(url: string): Promise<Uint8Array> {
+async function supabaseSignedUrl(path: string, minutes = 10): Promise<string> {
+  const { data, error } = await supabaseAdmin.storage
+    .from(SUPA_BUCKET_ORIG)
+    .createSignedUrl(path, 60 * minutes);
+  if (error) throw error;
+  return data!.signedUrl;
+}
+
+async function fetchBytes(url: string): Promise<Uint8Array> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Download failed: ${r.status}`);
   const ab = await r.arrayBuffer();
@@ -95,13 +76,12 @@ async function compositeOnColor(
 }
 
 /** ----------------------------------------------------------------
- *  Output-Normalisierung: unterstützt String, Array, Objekte
+ *  Replicate: robust ausführen (wir senden BLOB statt URL!)
+ *  - Manche Modelle zicken bei signierten URLs → Blob ist stabil.
+ *  - Output wird auf String-URL normalisiert.
  *  ---------------------------------------------------------------- */
-function normalizeReplicateOutput(output: any): string {
-  // 1) String direkt
+function normalizeOutput(output: any): string {
   if (typeof output === "string") return output;
-
-  // 2) Array mit einer URL
   if (Array.isArray(output) && output.length) {
     const first = output[0];
     if (typeof first === "string") return first;
@@ -112,89 +92,65 @@ function normalizeReplicateOutput(output: any): string {
         return first.data[0];
     }
   }
-
-  // 3) Objektfelder, die häufig vorkommen
   if (output && typeof output === "object") {
     if (typeof output.image === "string") return output.image;
     if (typeof output.output === "string") return output.output;
     if (Array.isArray(output.data) && typeof output.data[0] === "string")
       return output.data[0];
-    // Manchmal steckt die URL tiefer:
     for (const k of Object.keys(output)) {
       const v = (output as any)[k];
       if (typeof v === "string" && /^https?:\/\//.test(v)) return v;
     }
   }
-
   throw new Error("Unexpected Replicate output");
 }
 
-/** ----------------------------------------------------------------
- *  Ausführung mit Retries:
- *   - PRIMARY_MODEL (evtl. aus ENV)
- *   - wenn 422/Version: gleicher Slug mit :latest
- *   - dann Fallback-Kette
- *  ---------------------------------------------------------------- */
-async function runWithFallbacks(imageUrl: string): Promise<string> {
-  const tried: ModelSlug[] = [];
+async function runReplicateWithBlob(imageBytes: Uint8Array): Promise<string> {
+  // Node 18+ hat globalen Blob; MIME setzen hilft manchen Modellen
+  const blob = new Blob([imageBytes], { type: "image/png" });
 
-  async function tryModel(slug: ModelSlug): Promise<string> {
-    tried.push(slug);
-    const inputKey = pickInputKey(slug);
-    const res: any = await replicate.run(slug, {
-      input: { [inputKey]: imageUrl },
-    });
-    return normalizeReplicateOutput(res);
-  }
-
-  // 1) Primary (ENV/Default)
-  try {
-    return await tryModel(PRIMARY_MODEL);
-  } catch (err: any) {
-    const msg = String(err?.message || err);
-    // Wenn Version/Permission-Problem → auf :latest des gleichen Modells
-    if (
-      msg.includes("Invalid version") ||
-      msg.includes("not permitted") ||
-      msg.includes("422")
-    ) {
-      const latest = modelToLatest(PRIMARY_MODEL);
-      if (!tried.includes(latest)) {
-        try {
-          console.warn(
-            `[Replicate] Primary failed (${PRIMARY_MODEL}). Retrying with ${latest} …`,
-          );
-          return await tryModel(latest);
-        } catch (err2: any) {
-          console.warn(
-            `[Replicate] Latest retry failed (${latest}): ${String(err2?.message || err2)}`,
-          );
+  let lastErr: unknown = null;
+  for (const raw of PRIMARY_CHAIN) {
+    if (!raw || !/.+\/.+/.test(raw)) continue;
+    const slug = raw as ModelSlug;
+    try {
+      // Die meisten BG-Modelle akzeptieren "image" als File/Blob
+      const out: any = await replicate.run(slug, { input: { image: blob } });
+      const url = normalizeOutput(out);
+      return url;
+    } catch (e: any) {
+      lastErr = e;
+      const msg = String(e?.message || e);
+      console.warn(`[Replicate] Failed for ${slug}: ${msg}`);
+      // Bei Version-Fehler: gleicher Owner/Model mit :latest probieren
+      if (
+        msg.includes("Invalid version") ||
+        msg.includes("not permitted") ||
+        msg.includes("422")
+      ) {
+        const [owner, rest] = slug.split("/") as [string, string];
+        const model = rest.split(":")[0];
+        const latest = `${owner}/${model}:latest` as ModelSlug;
+        if (latest !== slug) {
+          try {
+            console.warn(`[Replicate] Retrying with ${latest} …`);
+            const out2: any = await replicate.run(latest, {
+              input: { image: blob },
+            });
+            const url = normalizeOutput(out2);
+            return url;
+          } catch (e2: any) {
+            lastErr = e2;
+            console.warn(
+              `[Replicate] Latest retry failed (${latest}): ${String(e2?.message || e2)}`,
+            );
+          }
         }
       }
-    } else {
-      console.warn(`[Replicate] Primary failed (${PRIMARY_MODEL}): ${msg}`);
+      // sonst → nächstes Modell in der Kette
     }
   }
-
-  // 2) Fallback-Kette
-  for (const slug of FALLBACK_CHAIN) {
-    try {
-      if (tried.includes(slug)) continue;
-      console.warn(`[Replicate] Trying fallback: ${slug}`);
-      return await tryModel(slug);
-    } catch (e: any) {
-      console.warn(
-        `[Replicate] Fallback failed (${slug}): ${String(e?.message || e)}`,
-      );
-      continue;
-    }
-  }
-
-  throw new Error(
-    `All models failed. Tried: ${[PRIMARY_MODEL, ...FALLBACK_CHAIN].join(
-      " -> ",
-    )}. Check Replicate billing & model permissions.`,
-  );
+  throw lastErr ?? new Error("All models failed");
 }
 
 /** ----------------------------------------------------------------
@@ -222,33 +178,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1) Signierte URL fürs Original (öffentlich erreichbar für Replicate)
-    const { data: signed, error: signErr } = await supabaseAdmin.storage
-      .from(SUPA_BUCKET_ORIG)
-      .createSignedUrl(originalPath, 60 * 10);
-    if (signErr) throw signErr;
+    // 1) Original von Supabase holen (signierte URL) und Bytes laden
+    const signedUrl = await supabaseSignedUrl(originalPath, 10);
+    const imageBytes = await fetchBytes(signedUrl);
 
-    // 2) Job anlegen
-    const { data: job, error: jobErr } = await supabaseAdmin
-      .from("ppp_jobs")
-      .insert([
-        {
-          user_id: userId ?? null,
-          original_path: originalPath,
-          bg_mode: bgMode,
-          brand_hex: brandHex ?? null,
-          status: "processing",
-        },
-      ])
-      .select()
-      .single();
-    if (jobErr) throw jobErr;
+    // 2) (Optional) kleines Pre-Processing: zu PNG normalisieren (manche Modelle mögen PNG lieber)
+    const pngBytes = new Uint8Array(
+      await sharp(toBuffer(imageBytes)).png().toBuffer(),
+    );
 
-    // 3) Hintergrund entfernen (robuste Kette)
-    const cutoutUrl = await runWithFallbacks(signed.signedUrl);
+    // 3) Replicate mit Blob-Input ausführen (kein URL-Input mehr!)
+    const cutoutUrl = await runReplicateWithBlob(pngBytes);
 
     // 4) Ergebnis holen
-    const cutoutBytes = await downloadToBytes(cutoutUrl);
+    const cutoutBytes = await fetchBytes(cutoutUrl);
 
     // 5) Optional: Hintergrund setzen
     let finalBytes = cutoutBytes;
@@ -264,7 +207,22 @@ export async function POST(req: NextRequest) {
     // "transparent": direkt speichern
 
     // 6) Speichern
-    const processedPath = `${userId ?? "anon"}/${job.id}.png`;
+    const { data: jobRow, error: jobErr } = await supabaseAdmin
+      .from("ppp_jobs")
+      .insert([
+        {
+          user_id: userId ?? null,
+          original_path: originalPath,
+          bg_mode: bgMode,
+          brand_hex: brandHex ?? null,
+          status: "processing",
+        },
+      ])
+      .select()
+      .single();
+    if (jobErr) throw jobErr;
+
+    const processedPath = `${userId ?? "anon"}/${jobRow.id}.png`;
     const { error: upErr } = await supabaseAdmin.storage
       .from(SUPA_BUCKET_PROC)
       .upload(processedPath, finalBytes as any, {
@@ -273,20 +231,19 @@ export async function POST(req: NextRequest) {
       });
     if (upErr) throw upErr;
 
-    // 7) Job updaten
     await supabaseAdmin
       .from("ppp_jobs")
       .update({ status: "done", processed_path: processedPath })
-      .eq("id", job.id);
+      .eq("id", jobRow.id);
 
-    return NextResponse.json({ jobId: job.id, processedPath });
+    return NextResponse.json({ jobId: jobRow.id, processedPath });
   } catch (e: any) {
     console.error("[process]", e?.message || e);
     return NextResponse.json(
       {
         error:
           e?.message ??
-          "Processing failed (check Replicate billing, model slug/version and ensure the image URL is publicly reachable).",
+          "Processing failed (check Replicate token, model permissions, and try again).",
       },
       { status: 500 },
     );
