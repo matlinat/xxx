@@ -11,25 +11,37 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
 });
 
-// super-simple helper: download URL -> Uint8Array
-async function fetchBytes(url: string): Promise<Uint8Array> {
+// exakt wie in der Doku (per ENV überschreibbar)
+const MODEL_VERSION =
+  process.env.REPLICATE_BG_VERSION ||
+  "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003";
+
+// kleine Helfer
+async function download(url: string): Promise<Uint8Array> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`download failed: ${r.status}`);
   const ab = await r.arrayBuffer();
   return new Uint8Array(ab);
 }
 
-// normalize replicate output (string or [string])
-function outUrl(output: any): string {
+// unterschiedliche Output-Formate robust auf eine URL abbilden – angelehnt an die SDK-Doku
+function extractUrl(output: any): string {
   if (typeof output === "string") return output;
   if (Array.isArray(output) && typeof output[0] === "string") return output[0];
-  throw new Error("unexpected replicate output");
+  if (output && typeof output.url === "function") return output.url();
+  if (output && typeof output.url === "string") return output.url;
+  if (
+    output &&
+    Array.isArray(output.files) &&
+    typeof output.files[0] === "string"
+  )
+    return output.files[0];
+  throw new Error("Unexpected Replicate output format");
 }
 
 export async function POST(req: NextRequest) {
   try {
     const { originalPath, userId } = await req.json();
-
     if (!originalPath) {
       return NextResponse.json(
         { error: "originalPath required" },
@@ -43,39 +55,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1) signierte URL fürs Original holen (öffentlich erreichbar für Replicate)
+    // 1) signierte (öffentliche) URL fürs Original aus Supabase
     const { data: signed, error: signErr } = await supabaseAdmin.storage
       .from(SUPA_BUCKET_ORIG)
       .createSignedUrl(originalPath, 60 * 10);
     if (signErr) throw signErr;
 
-    // 2) Job in DB anlegen (status processing)
-    const { data: job, error: jobErr } = await supabaseAdmin
-      .from("ppp_jobs")
-      .insert([
-        {
-          user_id: userId ?? null,
-          original_path: originalPath,
-          status: "processing",
-        },
-      ])
-      .select()
-      .single();
-    if (jobErr) throw jobErr;
-
-    // 3) Replicate aufrufen – simplest possible
-    //    Modell per ENV überschreibbar, sonst rembg:latest
-    const model = (process.env.REPLICATE_BG_MODEL ||
-      "cjwbw/rembg:latest") as any;
-    const output: any = await replicate.run(model, {
+    // 2) Replicate laut offizieller Doku aufrufen (konkrete Versions-SHA)
+    const output: any = await replicate.run(MODEL_VERSION as any, {
       input: { image: signed.signedUrl },
     });
-    const resultUrl = outUrl(output);
 
-    // 4) Ergebnis downloaden & in Supabase speichern
-    const bytes = await fetchBytes(resultUrl);
-    const processedPath = `${userId ?? "anon"}/${job.id}.png`;
+    // 3) Ergebnis-URL aus dem Output holen und Bytes laden
+    const fileUrl = extractUrl(output);
+    const bytes = await download(fileUrl);
 
+    // 4) in Supabase speichern
+    const processedPath = `${userId ?? "anon"}/${Date.now()}.png`;
     const { error: upErr } = await supabaseAdmin.storage
       .from(SUPA_BUCKET_PROC)
       .upload(processedPath, bytes as any, {
@@ -84,15 +80,10 @@ export async function POST(req: NextRequest) {
       });
     if (upErr) throw upErr;
 
-    // 5) Job auf done setzen
-    await supabaseAdmin
-      .from("ppp_jobs")
-      .update({ status: "done", processed_path: processedPath })
-      .eq("id", job.id);
-
-    return NextResponse.json({ jobId: job.id, processedPath });
+    // 5) Rückgabe
+    return NextResponse.json({ processedPath }, { status: 200 });
   } catch (e: any) {
-    console.error("[process-simple]", e?.message || e);
+    console.error("[process-doc-simple]", e?.message || e);
     return NextResponse.json(
       { error: e?.message ?? "processing failed" },
       { status: 500 },
