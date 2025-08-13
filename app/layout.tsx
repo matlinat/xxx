@@ -1,10 +1,19 @@
+// app/layout.tsx
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   title: "ProductPhotoPop",
   description: "Hintergrund in Sekunden entfernen",
-  viewport: "width=device-width, initial-scale=1",
+  // ❌ KEIN viewport mehr hier
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  // optional:
+  // themeColor: "#ffffff",
 };
 
 export default function RootLayout({
