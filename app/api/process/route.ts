@@ -8,11 +8,23 @@ import {
   SUPA_BUCKET_PROC,
 } from "@/lib/supabase";
 
+// ---- Replicate Setup ----
+type ModelSlug = `${string}/${string}` | `${string}/${string}:${string}`;
+
+const DEFAULT_MODEL: ModelSlug = "851-labs/background-remover:latest";
+const FALLBACK_MODEL: ModelSlug = "lucataco/remove-bg:latest";
+
+const envModel = process.env.REPLICATE_BG_MODEL;
+const PRIMARY_MODEL: ModelSlug =
+  envModel && /.+\/.+/.test(envModel) ? (envModel as ModelSlug) : DEFAULT_MODEL;
+
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
 });
 
-// URL -> Uint8Array (vermeidet Buffer-Generics-Konflikt)
+// ---- Helpers ----
+
+// URL -> Uint8Array (vermeidet Buffer-Generics-Konflikte in TS/Node 20+)
 async function downloadToBytes(url: string): Promise<Uint8Array> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Download failed: ${r.status}`);
@@ -20,10 +32,10 @@ async function downloadToBytes(url: string): Promise<Uint8Array> {
   return new Uint8Array(ab);
 }
 
-// Hilfsfunktion: Beliebige Bytes sicher in Buffer wandeln
-function toBuffer(bytes: Uint8Array | ArrayBuffer): Buffer {
+// Beliebige Bytes sicher in Node-Buffer wandeln
+function toBuffer(bytes: Uint8Array | ArrayBuffer | Buffer): Buffer {
   return Buffer.isBuffer(bytes)
-    ? (bytes as Buffer)
+    ? bytes
     : Buffer.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
 }
 
@@ -50,10 +62,34 @@ async function compositeOnColor(
     .png()
     .toBuffer();
 
-  // als Uint8Array zurückgeben (breit kompatibel)
   return new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
 }
 
+// Replicate aufrufen (mit Fallback)
+async function runBackgroundRemoval(imageUrl: string): Promise<string> {
+  try {
+    const res: any = await replicate.run(PRIMARY_MODEL, {
+      input: { image: imageUrl },
+    });
+    const url = Array.isArray(res) ? res[0] : res;
+    if (!url || typeof url !== "string")
+      throw new Error("Unexpected Replicate output");
+    return url;
+  } catch (err) {
+    console.warn(
+      `[Replicate] Primary model failed (${PRIMARY_MODEL}), trying fallback...`,
+    );
+    const res: any = await replicate.run(FALLBACK_MODEL, {
+      input: { image: imageUrl },
+    });
+    const url = Array.isArray(res) ? res[0] : res;
+    if (!url || typeof url !== "string")
+      throw new Error("Unexpected Replicate fallback output");
+    return url;
+  }
+}
+
+// ---- API Route ----
 export async function POST(req: NextRequest) {
   try {
     const {
@@ -98,19 +134,11 @@ export async function POST(req: NextRequest) {
       .single();
     if (jobErr) throw jobErr;
 
-    // 3) Replicate: Hintergrund entfernen (SDK)
-    const output: any = await replicate.run(
-      "851-labs/background-remover:latest",
-      { input: { image: signed.signedUrl } },
-    );
-
-    const outputUrl = Array.isArray(output) ? output[0] : output;
-    if (!outputUrl || typeof outputUrl !== "string") {
-      throw new Error("Unexpected Replicate output format");
-    }
+    // 3) Hintergrund entfernen (Replicate, mit Fallback)
+    const cutoutUrl = await runBackgroundRemoval(signed.signedUrl);
 
     // 4) Ergebnis laden
-    const cutoutBytes = await downloadToBytes(outputUrl);
+    const cutoutBytes = await downloadToBytes(cutoutUrl);
 
     // 5) Optional: Hintergrund setzen
     let finalBytes = cutoutBytes;
@@ -125,7 +153,7 @@ export async function POST(req: NextRequest) {
     }
     // bgMode === "transparent": freigestelltes PNG unverändert lassen
 
-    // 6) Speichern (Supabase akzeptiert Uint8Array / ArrayBuffer)
+    // 6) Speichern
     const processedPath = `${userId ?? "anon"}/${job.id}.png`;
     const { error: upErr } = await supabaseAdmin.storage
       .from(SUPA_BUCKET_PROC)
