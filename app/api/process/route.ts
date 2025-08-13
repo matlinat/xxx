@@ -8,23 +8,21 @@ import {
   SUPA_BUCKET_PROC,
 } from "@/lib/supabase";
 
-// ---- Replicate Setup ----
+// --- Replicate Model-Typen & Slugs ---
 type ModelSlug = `${string}/${string}` | `${string}/${string}:${string}`;
 
+// Empfohlen von Replicate:
 const DEFAULT_MODEL: ModelSlug = "851-labs/background-remover:latest";
 const FALLBACK_MODEL: ModelSlug = "lucataco/remove-bg:latest";
 
+// Env-Override nur akzeptieren, wenn Format passt
 const envModel = process.env.REPLICATE_BG_MODEL;
 const PRIMARY_MODEL: ModelSlug =
   envModel && /.+\/.+/.test(envModel) ? (envModel as ModelSlug) : DEFAULT_MODEL;
 
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN!,
-});
+const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
 
 // ---- Helpers ----
-
-// URL -> Uint8Array (vermeidet Buffer-Generics-Konflikte in TS/Node 20+)
 async function downloadToBytes(url: string): Promise<Uint8Array> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Download failed: ${r.status}`);
@@ -32,14 +30,12 @@ async function downloadToBytes(url: string): Promise<Uint8Array> {
   return new Uint8Array(ab);
 }
 
-// Beliebige Bytes sicher in Node-Buffer wandeln
 function toBuffer(bytes: Uint8Array | ArrayBuffer | Buffer): Buffer {
   return Buffer.isBuffer(bytes)
     ? bytes
     : Buffer.from(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
 }
 
-// PNG mit Transparenz auf farbigen Hintergrund setzen
 async function compositeOnColor(
   foreground: Uint8Array | ArrayBuffer | Buffer,
   hex = "#FFFFFF",
@@ -65,27 +61,37 @@ async function compositeOnColor(
   return new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
 }
 
-// Replicate aufrufen (mit Fallback)
+function normalizeOutput(output: any): string {
+  const url = Array.isArray(output) ? output[0] : output;
+  if (!url || typeof url !== "string")
+    throw new Error("Unexpected Replicate output");
+  return url;
+}
+
 async function runBackgroundRemoval(imageUrl: string): Promise<string> {
   try {
     const res: any = await replicate.run(PRIMARY_MODEL, {
       input: { image: imageUrl },
     });
-    const url = Array.isArray(res) ? res[0] : res;
-    if (!url || typeof url !== "string")
-      throw new Error("Unexpected Replicate output");
-    return url;
-  } catch (err) {
-    console.warn(
-      `[Replicate] Primary model failed (${PRIMARY_MODEL}), trying fallback...`,
-    );
-    const res: any = await replicate.run(FALLBACK_MODEL, {
+    return normalizeOutput(res);
+  } catch (err: any) {
+    // Explizite 422-Fehlermeldung lesbar machen
+    const msg = String(err?.message || err);
+    if (
+      msg.includes("Invalid version") ||
+      msg.includes("not permitted") ||
+      msg.includes("422")
+    ) {
+      console.warn(
+        `[Replicate] Primary failed (${PRIMARY_MODEL}): ${msg}. Trying fallback…`,
+      );
+    } else {
+      console.warn(`[Replicate] Primary failed: ${msg}. Trying fallback…`);
+    }
+    const res2: any = await replicate.run(FALLBACK_MODEL, {
       input: { image: imageUrl },
     });
-    const url = Array.isArray(res) ? res[0] : res;
-    if (!url || typeof url !== "string")
-      throw new Error("Unexpected Replicate fallback output");
-    return url;
+    return normalizeOutput(res2);
   }
 }
 
@@ -112,7 +118,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1) Signierte URL fürs Original
+    // 1) Signierte URL fürs Original (Replicate braucht öffentlich erreichbare URL)
     const { data: signed, error: signErr } = await supabaseAdmin.storage
       .from(SUPA_BUCKET_ORIG)
       .createSignedUrl(originalPath, 60 * 10);
@@ -134,10 +140,10 @@ export async function POST(req: NextRequest) {
       .single();
     if (jobErr) throw jobErr;
 
-    // 3) Hintergrund entfernen (Replicate, mit Fallback)
+    // 3) Hintergrund entfernen (mit Fallback)
     const cutoutUrl = await runBackgroundRemoval(signed.signedUrl);
 
-    // 4) Ergebnis laden
+    // 4) Ergebnis holen
     const cutoutBytes = await downloadToBytes(cutoutUrl);
 
     // 5) Optional: Hintergrund setzen
@@ -151,7 +157,7 @@ export async function POST(req: NextRequest) {
     ) {
       finalBytes = await compositeOnColor(cutoutBytes, brandHex.trim());
     }
-    // bgMode === "transparent": freigestelltes PNG unverändert lassen
+    // "transparent": direkt speichern
 
     // 6) Speichern
     const processedPath = `${userId ?? "anon"}/${job.id}.png`;
@@ -173,7 +179,11 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error("[process]", e?.message || e);
     return NextResponse.json(
-      { error: e?.message ?? "Processing failed" },
+      {
+        error:
+          e?.message ??
+          "Processing failed (check Replicate billing & model slug)",
+      },
       { status: 500 },
     );
   }
