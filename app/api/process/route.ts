@@ -11,12 +11,11 @@ const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
 });
 
-// exakt wie in der Doku (per ENV überschreibbar)
+// fixe, funktionierende rembg-Version (kannst per ENV überschreiben)
 const MODEL_VERSION =
   process.env.REPLICATE_BG_VERSION ||
   "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003";
 
-// kleine Helfer
 async function download(url: string): Promise<Uint8Array> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`download failed: ${r.status}`);
@@ -24,7 +23,6 @@ async function download(url: string): Promise<Uint8Array> {
   return new Uint8Array(ab);
 }
 
-// unterschiedliche Output-Formate robust auf eine URL abbilden – angelehnt an die SDK-Doku
 function extractUrl(output: any): string {
   if (typeof output === "string") return output;
   if (Array.isArray(output) && typeof output[0] === "string") return output[0];
@@ -55,23 +53,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1) signierte (öffentliche) URL fürs Original aus Supabase
+    // 0) Job anlegen (status: processing) – damit das Frontend eine jobId hat
+    const { data: job, error: jobErr } = await supabaseAdmin
+      .from("ppp_jobs")
+      .insert([
+        {
+          user_id: userId ?? null,
+          original_path: originalPath,
+          status: "processing",
+        },
+      ])
+      .select()
+      .single();
+    if (jobErr) throw jobErr;
+
+    // 1) signierte URL fürs Original
     const { data: signed, error: signErr } = await supabaseAdmin.storage
       .from(SUPA_BUCKET_ORIG)
       .createSignedUrl(originalPath, 60 * 10);
     if (signErr) throw signErr;
 
-    // 2) Replicate laut offizieller Doku aufrufen (konkrete Versions-SHA)
+    // 2) Replicate (offizielle Doku: konkrete Versions-SHA)
     const output: any = await replicate.run(MODEL_VERSION as any, {
       input: { image: signed.signedUrl },
     });
 
-    // 3) Ergebnis-URL aus dem Output holen und Bytes laden
+    // 3) Ergebnis-URL holen und Bytes laden
     const fileUrl = extractUrl(output);
     const bytes = await download(fileUrl);
 
     // 4) in Supabase speichern
-    const processedPath = `${userId ?? "anon"}/${Date.now()}.png`;
+    const processedPath = `${userId ?? "anon"}/${job.id}.png`;
     const { error: upErr } = await supabaseAdmin.storage
       .from(SUPA_BUCKET_PROC)
       .upload(processedPath, bytes as any, {
@@ -80,10 +92,16 @@ export async function POST(req: NextRequest) {
       });
     if (upErr) throw upErr;
 
-    // 5) Rückgabe
-    return NextResponse.json({ processedPath }, { status: 200 });
+    // 5) Job updaten
+    await supabaseAdmin
+      .from("ppp_jobs")
+      .update({ status: "done", processed_path: processedPath })
+      .eq("id", job.id);
+
+    // 6) Antwort (Frontend kann optional weiter-pollen oder direkt downloaden)
+    return NextResponse.json({ jobId: job.id, processedPath }, { status: 200 });
   } catch (e: any) {
-    console.error("[process-doc-simple]", e?.message || e);
+    console.error("[/api/process]", e?.message || e);
     return NextResponse.json(
       { error: e?.message ?? "processing failed" },
       { status: 500 },
