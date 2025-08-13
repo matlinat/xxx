@@ -8,21 +8,33 @@ import {
   SUPA_BUCKET_PROC,
 } from "@/lib/supabase";
 
-// --- Replicate Model-Typen & Slugs ---
+// ---- Replicate: Typen & Modelle ----
 type ModelSlug = `${string}/${string}` | `${string}/${string}:${string}`;
 
-// Empfohlen von Replicate:
 const DEFAULT_MODEL: ModelSlug = "851-labs/background-remover:latest";
 const FALLBACK_MODEL: ModelSlug = "lucataco/remove-bg:latest";
 
-// Env-Override nur akzeptieren, wenn Format passt
-const envModel = process.env.REPLICATE_BG_MODEL;
-const PRIMARY_MODEL: ModelSlug =
-  envModel && /.+\/.+/.test(envModel) ? (envModel as ModelSlug) : DEFAULT_MODEL;
+// Slug normalisieren: Whitespace entfernen, `owner/model[:version]` sicherstellen
+function normalizeModelSlug(raw?: string | null): ModelSlug {
+  if (!raw) return DEFAULT_MODEL;
+  // trim + Whitespaces um ":" entfernen
+  let s = raw.trim().replace(/\s*:\s*/, ":");
+  // wenn kein owner/model Muster → Default
+  if (!/^.+\/.+$/.test(s)) return DEFAULT_MODEL;
+  // wenn Doppelpunkt vorhanden, aber Version leer -> auf latest setzen
+  if (/:$/.test(s)) s = s + "latest";
+  return s as ModelSlug;
+}
 
-const replicate = new Replicate({ auth: process.env.REPLICATE_API_TOKEN! });
+const PRIMARY_MODEL: ModelSlug = normalizeModelSlug(
+  process.env.REPLICATE_BG_MODEL,
+);
 
-// ---- Helpers ----
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_TOKEN!,
+});
+
+// ---- Byte/Buffer Utilities ----
 async function downloadToBytes(url: string): Promise<Uint8Array> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Download failed: ${r.status}`);
@@ -68,31 +80,55 @@ function normalizeOutput(output: any): string {
   return url;
 }
 
+// Falls Version ungültig ist (422), probiere dasselbe Modell mit :latest
+function modelToLatest(slug: ModelSlug): ModelSlug {
+  const [owner, rest] = slug.split("/") as [string, string];
+  const model = rest.split(":")[0];
+  return `${owner}/${model}:latest` as ModelSlug;
+}
+
 async function runBackgroundRemoval(imageUrl: string): Promise<string> {
+  // 1) Primärmodell (bereits normalisiert)
   try {
     const res: any = await replicate.run(PRIMARY_MODEL, {
       input: { image: imageUrl },
     });
     return normalizeOutput(res);
   } catch (err: any) {
-    // Explizite 422-Fehlermeldung lesbar machen
     const msg = String(err?.message || err);
-    if (
+    const isVersionError =
       msg.includes("Invalid version") ||
       msg.includes("not permitted") ||
-      msg.includes("422")
-    ) {
+      msg.includes("422");
+
+    if (isVersionError) {
+      // 2) Gleiches Modell mit :latest probieren (falls Version-Problem)
+      const latest = modelToLatest(PRIMARY_MODEL);
+      console.warn(
+        `[Replicate] Primary failed (${PRIMARY_MODEL}). Retrying with ${latest} …`,
+      );
+      try {
+        const res2: any = await replicate.run(latest, {
+          input: { image: imageUrl },
+        });
+        return normalizeOutput(res2);
+      } catch (err2: any) {
+        console.warn(
+          `[Replicate] Latest retry failed (${latest}): ${String(err2?.message || err2)}. Fallback…`,
+        );
+      }
+    } else {
       console.warn(
         `[Replicate] Primary failed (${PRIMARY_MODEL}): ${msg}. Trying fallback…`,
       );
-    } else {
-      console.warn(`[Replicate] Primary failed: ${msg}. Trying fallback…`);
     }
-    const res2: any = await replicate.run(FALLBACK_MODEL, {
-      input: { image: imageUrl },
-    });
-    return normalizeOutput(res2);
   }
+
+  // 3) Fallback-Modell
+  const res3: any = await replicate.run(FALLBACK_MODEL, {
+    input: { image: imageUrl },
+  });
+  return normalizeOutput(res3);
 }
 
 // ---- API Route ----
@@ -140,7 +176,7 @@ export async function POST(req: NextRequest) {
       .single();
     if (jobErr) throw jobErr;
 
-    // 3) Hintergrund entfernen (mit Fallback)
+    // 3) Hintergrund entfernen (mit Version-Fix & Fallbacks)
     const cutoutUrl = await runBackgroundRemoval(signed.signedUrl);
 
     // 4) Ergebnis holen
@@ -182,7 +218,7 @@ export async function POST(req: NextRequest) {
       {
         error:
           e?.message ??
-          "Processing failed (check Replicate billing & model slug)",
+          "Processing failed (check Replicate billing & model slug formatting)",
       },
       { status: 500 },
     );
