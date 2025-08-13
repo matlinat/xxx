@@ -1,4 +1,7 @@
-export const metadata = { title: "ProductPhotoPop" };
+export const metadata = {
+  title: "ProductPhotoPop",
+  viewport: "width=device-width, initial-scale=1",
+};
 
 export default function RootLayout({
   children,
@@ -7,7 +10,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="de">
-      <body style={{ fontFamily: "system-ui, Arial, sans-serif", padding: 24 }}>
+      <body className="min-h-dvh bg-white text-gray-900 antialiased">
         {children}
       </body>
     </html>
