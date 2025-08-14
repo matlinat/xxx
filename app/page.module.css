@@ -1,0 +1,151 @@
+.container {
+    max-width: 64rem;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.header {
+    text-align: center;
+}
+.title {
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+.sub {
+    color: var(--muted);
+    margin-top: 0.25rem;
+}
+
+.card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card-bg);
+}
+
+.cardBody {
+    padding: 1rem;
+}
+.cardHeader {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.cardTitle {
+    font-weight: 600;
+}
+
+.uploadZone {
+    height: 10rem;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: var(--muted);
+    transition: background 0.2s ease;
+}
+.uploadZone:hover {
+    background: var(--accent);
+    color: var(--accent-foreground);
+}
+.hiddenInput {
+    display: none;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+@media (min-width: 640px) {
+    .controls {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+.select,
+.textInput {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--background);
+    color: var(--foreground);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    height: 2.5rem;
+}
+
+.colorWrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+}
+
+.colorInput {
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+.button {
+    /* border: none;
+    border-radius: 8px;
+    height: 2.5rem;
+    padding: 0 1rem;
+    background: #111827;
+    color: #fff;
+    transition: opacity 0.2s ease; */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem; /* px-4 py-2 */
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* font-medium */
+    border-radius: 0.375rem; /* rounded-md */
+    border: 1px solid #d1d5db; /* border-gray-300 */
+    background-color: white;
+    color: #111827; /* text-gray-900 */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.button.link {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    height: auto;
+    text-decoration: underline;
+}
+
+.grid {
+    display: grid;
+    gap: 1rem;
+}
+@media (min-width: 640px) {
+    .grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.previewTitle {
+    color: var(--muted);
+    font-size: 0.875rem;
+}
+
+.footer {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
