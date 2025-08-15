@@ -1,20 +1,10 @@
-// app/page.tsx
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import styles from "./page.module.css";
 
 type BgMode = "transparent" | "white" | "brand";
+
 const isHexColor = (v: string) => /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(v);
 
 export default function Page() {
@@ -47,9 +37,13 @@ export default function Page() {
   }
 
   async function startProcess() {
-    if (!file) return setMsg("Bitte zuerst ein Bild wählen.");
+    if (!file) {
+      setMsg("Bitte zuerst ein Bild wählen.");
+      return;
+    }
     if (bgMode === "brand" && !isHexColor(brandHex)) {
-      return setMsg("Bitte eine gültige HEX-Farbe angeben (z. B. #ff6600).");
+      setMsg("Bitte eine gültige HEX-Farbe angeben (z. B. #ff6600).");
+      return;
     }
 
     setLoading(true);
@@ -67,9 +61,8 @@ export default function Page() {
         token?: string;
         path?: string;
       } = await signRes.json();
-      if (sign.error || !sign.signedUrl || !sign.token || !sign.path) {
+      if (sign.error || !sign.signedUrl || !sign.token || !sign.path)
         throw new Error(sign.error ?? "Signierung fehlgeschlagen.");
-      }
 
       const putRes = await fetch(sign.signedUrl, {
         method: "PUT",
@@ -105,7 +98,7 @@ export default function Page() {
             setMsg("Fertig ✅");
           }
         } catch {
-          /* still polling */
+          /* weiterpolling */
         }
       }, 1500);
     } catch (e) {
@@ -116,59 +109,49 @@ export default function Page() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 space-y-8">
+    <main className={styles.container}>
       {/* Header */}
-      <header className="text-center space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">ProductPhotoPop</h1>
-        <p className="text-muted-foreground">
+      <header className={styles.header}>
+        <h1 className={styles.title}>ProductPhotoPop</h1>
+        <p className={styles.sub}>
           Entferne Hintergründe in Sekunden und setze dein Produkt perfekt in
           Szene.
         </p>
       </header>
 
       {/* Upload Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Bild hochladen</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Dropzone */}
-          <Label
-            htmlFor="file"
-            className="
-              flex h-40 w-full cursor-pointer flex-col items-center justify-center
-              rounded-xl border border-dashed border-border text-center text-muted-foreground
-              transition-colors hover:bg-accent hover:text-accent-foreground
-            "
-          >
+      <section className={styles.card}>
+        <div className={styles.cardHeader}>
+          <div className={styles.cardTitle}>Bild hochladen</div>
+        </div>
+        <div className={styles.cardBody}>
+          <label htmlFor="file" className={styles.uploadZone}>
             <span>Datei hier ablegen oder klicken</span>
-            <Input
+            <input
               id="file"
               type="file"
               accept="image/*"
-              className="hidden"
+              className={styles.hiddenInput}
               onChange={(e) => onFilesSelected(e.target.files)}
             />
-          </Label>
+          </label>
 
-          {/* Controls */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Select
+          <div style={{ height: ".75rem" }} />
+
+          <div className={styles.controls}>
+            <select
+              className={styles.select}
               value={bgMode}
-              onValueChange={(v) => setBgMode(v as BgMode)}
+              onChange={(e) => setBgMode(e.target.value as BgMode)}
+              aria-label="Hintergrund wählen"
             >
-              <SelectTrigger className="w-full sm:w-56">
-                <SelectValue placeholder="Hintergrund wählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="white">Weiß</SelectItem>
-                <SelectItem value="brand">Markenfarbe</SelectItem>
-                <SelectItem value="transparent">Transparent</SelectItem>
-              </SelectContent>
-            </Select>
+              <option value="white">Weiß</option>
+              <option value="brand">Markenfarbe</option>
+              <option value="transparent">Transparent</option>
+            </select>
 
             <div
-              className="flex items-center gap-3 rounded-md border px-3 py-2 sm:flex-1"
+              className={styles.colorWrap}
               aria-disabled={bgMode !== "brand"}
             >
               <input
@@ -176,76 +159,75 @@ export default function Page() {
                 value={brandHex}
                 onChange={(e) => setBrandHex(e.target.value)}
                 disabled={bgMode !== "brand"}
-                className="h-6 w-6 cursor-pointer disabled:opacity-40"
+                className={styles.colorInput}
                 aria-label="Markenfarbe wählen"
               />
-              <Input
+              <input
                 value={brandHex}
                 onChange={(e) => setBrandHex(e.target.value)}
                 disabled={bgMode !== "brand"}
-                className="max-w-28"
+                className={styles.textInput}
                 placeholder="#ffffff"
               />
             </div>
 
-            <Button
+            <button
+              className={styles.button}
               onClick={startProcess}
               disabled={loading || !file}
-              className="shrink-0"
             >
               {loading ? "Verarbeite…" : "Jetzt optimieren"}
-            </Button>
+            </button>
           </div>
 
-          {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
-        </CardContent>
-      </Card>
+          {msg && (
+            <>
+              <div style={{ height: ".5rem" }} />
+              <p style={{ fontSize: ".875rem", color: "var(--muted)" }}>
+                {msg}
+              </p>
+            </>
+          )}
+        </div>
+      </section>
 
       {/* Preview */}
       {(originalPreview || resultUrl) && (
-        <div className="flex flex-col gap-4 sm:flex-row">
+        <div className={styles.grid}>
           {originalPreview && (
-            <Card className="flex-1">
-              <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground">
-                  Original
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <img
-                  src={originalPreview}
-                  alt="Original"
-                  className="w-full max-h-96 rounded-lg object-contain"
-                />
-              </CardContent>
-            </Card>
+            <section className={styles.card}>
+              <div className={styles.cardHeader}>
+                <div className={styles.previewTitle}>Original</div>
+              </div>
+              <div className={styles.cardBody}>
+                <img src={originalPreview} alt="Original" />
+              </div>
+            </section>
           )}
           {resultUrl && (
-            <Card className="flex-1">
-              <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground">
-                  Ergebnis
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <img
-                  src={resultUrl}
-                  alt="Ergebnis"
-                  className="w-full max-h-96 rounded-lg object-contain"
-                />
-                <Button variant="link" asChild className="px-0 mt-2">
-                  <a href={resultUrl} download>
+            <section className={styles.card}>
+              <div className={styles.cardHeader}>
+                <div className={styles.previewTitle}>Ergebnis</div>
+              </div>
+              <div className={styles.cardBody}>
+                <img src={resultUrl} alt="Ergebnis" />
+                <div style={{ marginTop: ".5rem" }}>
+                  <a
+                    className={`${styles.button} ${styles.link}`}
+                    href={resultUrl}
+                    download
+                  >
                     Ergebnis herunterladen
                   </a>
-                </Button>
-              </CardContent>
-            </Card>
+                </div>
+              </div>
+            </section>
           )}
         </div>
       )}
 
       {/* Footer */}
-      <footer className="text-center text-xs text-muted-foreground">
+      <footer className={styles.footer}>
         DSGVO-freundlich • In wenigen Sekunden fertig • Für Shopify, Amazon
         &amp; Co.
       </footer>
