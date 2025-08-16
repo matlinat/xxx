@@ -1,11 +1,10 @@
-import { SignUpForm } from "@/components/sign-up-form";
+import { registerAction } from '../actions'
+import { SignUpForm } from '@/components/sign-up-form'
 
-export default function LoginPage() {
+export default function Page() {
   return (
-    <div className="bg-background flex min-h-svh flex-col items-center justify-center gap-6 p-6 md:p-10">
-      <div className="w-full max-w-sm">
-        <SignUpForm />
-      </div>
-    </div>
-  );
+    <main className="mx-auto max-w-sm p-6">
+      <SignUpForm action={registerAction} />
+    </main>
+  )
 }

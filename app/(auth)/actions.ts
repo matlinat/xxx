@@ -1,6 +1,15 @@
 'use server'
+
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
+
+// Admin-Client für DB-Eintrag nach Registrierung
+const supabaseAdmin = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } }
+)
 
 export async function loginAction(formData: FormData) {
   const email = String(formData.get('email') || '')
@@ -10,11 +19,9 @@ export async function loginAction(formData: FormData) {
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    // Surface a form-level error via URL param, cookies, or return value
     return { error: error.message }
   }
 
-  // On success, cookies are already set by the helper; redirect anywhere
   redirect('/')
 }
 
@@ -22,4 +29,35 @@ export async function logoutAction() {
   const supabase = await createClient()
   await supabase.auth.signOut()
   redirect('/login')
+}
+
+export async function registerAction(formData: FormData) {
+  const email = String(formData.get('email') || '')
+  const password = String(formData.get('password') || '')
+  const username = String(formData.get('username') || '')
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  const user = data.user
+  if (!user) return { error: 'Registrierung fehlgeschlagen.' }
+
+  // Eintrag in users-Tabelle
+  const { error: insertError } = await supabaseAdmin.from('users').insert({
+    auth_user_id: user.id,
+    username,
+  })
+
+  if (insertError) {
+    return { error: insertError.message }
+  }
+
+  redirect('/')
 }
