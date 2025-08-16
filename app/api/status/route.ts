@@ -1,6 +1,6 @@
 // app/api/status/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin, SUPA_BUCKET_PROC } from "@/lib/supabase/client";
+import { supabaseAdmin, SUPA_BUCKET_PROC } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
   try {
