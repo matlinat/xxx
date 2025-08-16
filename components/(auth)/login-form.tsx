@@ -23,7 +23,7 @@ export function LoginForm({ className, action }: { className?: string; action: (
       if (res && 'error' in res && res.error) {
         setError(res.error)
       } else {
-        router.replace('/')
+        router.replace('/dashboard')
       }
     })
   }
@@ -48,9 +48,9 @@ export function LoginForm({ className, action }: { className?: string; action: (
               <div className="flex size-8 items-center justify-center rounded-md">
                 <GalleryVerticalEnd className="size-6" />
               </div>
-              <span className="sr-only">Acme Inc.</span>
+              <span className="sr-only">PPP</span>
             </div>
-            <h1 className="text-xl font-bold">Welcome to Acme Inc.</h1>
+            <h1 className="text-xl font-bold">Welcome Back, Marketer! Login with your existing account.</h1>
             <div className="text-center text-sm">
               Don&apos;t have an account?{' '}
               <a href="/signup" className="underline underline-offset-4">
