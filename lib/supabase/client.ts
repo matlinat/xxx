@@ -1,3 +1,12 @@
+// lib/supabase/client.ts
+'use client'
+import { createBrowserClient } from '@supabase/ssr'
+
+export const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
+
 import { createClient } from "@supabase/supabase-js";
 
 export const supabaseAdmin = createClient(
@@ -8,13 +17,3 @@ export const supabaseAdmin = createClient(
 
 export const SUPA_BUCKET_ORIG = process.env.SUPABASE_BUCKET_ORIGINALS!;
 export const SUPA_BUCKET_PROC = process.env.SUPABASE_BUCKET_PROCESSED!;
-
-
-// lib/supabase/client.ts
-'use client'
-import { createBrowserClient } from '@supabase/ssr'
-
-export const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
