@@ -22,7 +22,7 @@ export async function loginAction(formData: FormData) {
     return { error: error.message }
   }
 
-  redirect('/')
+  redirect('/dashboard')
 }
 
 export async function logoutAction() {
