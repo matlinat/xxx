@@ -5,7 +5,7 @@ import {
   supabaseAdmin,
   SUPA_BUCKET_ORIG,
   SUPA_BUCKET_PROC,
-} from "@/lib/supabase";
+} from "@/lib/supabase/client";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,

@@ -3,7 +3,7 @@ import {
   supabaseAdmin,
   SUPA_BUCKET_ORIG,
   SUPA_BUCKET_PROC,
-} from "@/lib/supabase";
+} from "@/lib/supabase/client";
 
 const REPLICATE_VERSION_BG = process.env.REPLICATE_BG_VERSION ?? ""; // TODO: Version-ID eintragen
 const REPLICATE_BASE = "https://api.replicate.com/v1/predictions";

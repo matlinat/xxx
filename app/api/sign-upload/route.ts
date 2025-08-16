@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin, SUPA_BUCKET_ORIG } from "@/lib/supabase";
+import { supabaseAdmin, SUPA_BUCKET_ORIG } from "@/lib/supabase/client";
 
 export async function POST(req: NextRequest) {
   try {
