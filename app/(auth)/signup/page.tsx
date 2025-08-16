@@ -1,5 +1,5 @@
 import { registerAction } from '../actions'
-import { SignUpForm } from '@/components/sign-up-form'
+import { SignUpForm } from '@/components/signup-form'
 
 export default function Page() {
   return (
