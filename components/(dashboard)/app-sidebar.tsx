@@ -39,7 +39,6 @@ const data = {
     { title: "Quick Create", url: "/quick-create", icon: IconPlus, highlight: true },
     { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
     { title: "Job History", url: "/job-history", icon: IconListDetails },
-    { title: "Analytics", url: "/analytics", icon: IconChartBar },
     { title: "Projects", url: "/projects", icon: IconFolder },
   ],
   // navClouds und documents aktuell nicht benötigt
