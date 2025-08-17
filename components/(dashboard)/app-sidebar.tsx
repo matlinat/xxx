@@ -3,65 +3,48 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { motion } from "framer-motion"
 import {
-  IconCamera,
-  IconChartBar,
-  IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
-  IconSettings,
+  IconCamera, IconChartBar, IconDashboard, IconDatabase, IconFileAi,
+  IconFileDescription, IconFileWord, IconFolder, IconHelp, IconInnerShadowTop,
+  IconListDetails, IconReport, IconSearch, IconSettings,
 } from "@tabler/icons-react"
+import { motion } from "framer-motion"
 
+import { NavMain } from "@/components/(dashboard)/nav-main"
+import { NavSecondary } from "@/components/(dashboard)/nav-secondary"
 import { NavUser } from "@/components/nav-user/nav-user"
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  Sidebar, SidebarContent, SidebarFooter, SidebarHeader,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
+const navItems = [
+  { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
+  { title: "Quick Create", url: "/quick-create", icon: IconCamera },
+  { title: "Job History", url: "/job-history", icon: IconListDetails },
+  { title: "Projects", url: "/projects", icon: IconFolder },
+]
+
+const navSecondary = [
+  { title: "Settings", url: "/settings", icon: IconSettings },
+  { title: "Get Help", url: "/help", icon: IconHelp },
+  // { title: "Search", url: "/search", icon: IconSearch },
+]
+
+// const documents = [
+//   { name: "Data Library", url: "/data-library", icon: IconDatabase },
+//   { name: "Reports", url: "/reports", icon: IconReport },
+//   { name: "Word Assistant", url: "/word-assistant", icon: IconFileWord },
+// ]
+
 type UIUser = { name: string; email: string; avatar: string }
-
-const NavItem = ({ href, title, icon: Icon }: { href: string; title: string; icon: any }) => {
-  const pathname = usePathname()
-  const isActive = pathname === href
-
-  return (
-    <SidebarMenuItem>
-      <Link href={href} className="relative">
-        <SidebarMenuButton
-          className={isActive ? "bg-accent text-accent-foreground" : "hover:bg-muted"}
-        >
-          {isActive && (
-            <motion.span
-              layoutId="sidebar-highlight"
-              className="absolute inset-y-1 left-1 w-1 rounded bg-primary"
-            />
-          )}
-          <Icon className="mr-2 size-4" />
-          {title}
-        </SidebarMenuButton>
-      </Link>
-    </SidebarMenuItem>
-  )
-}
 
 export function AppSidebar(
   { user, ...props }:
   React.ComponentProps<typeof Sidebar> & { user: UIUser }
 ) {
+  const pathname = usePathname()
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -71,9 +54,9 @@ export function AppSidebar(
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Link href="/dashboard">
+              <Link href="/dashboard" className="flex items-center gap-2">
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
+                <span className="text-base font-semibold">PPP</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -82,28 +65,58 @@ export function AppSidebar(
 
       <SidebarContent>
         <SidebarMenu>
-          {/* Prominent platzierter Quick Create Button */}
-          <NavItem href="/quick-create" title="Quick Create" icon={IconCamera} />
-        </SidebarMenu>
-        <SidebarMenu>
-          <NavItem href="/dashboard" title="Dashboard" icon={IconDashboard} />
-          <NavItem href="/job-history" title="Job History" icon={IconListDetails} />
-          <NavItem href="/projects" title="Projects" icon={IconFolder} />
+          {navItems.map(({ title, url, icon: Icon }) => {
+            const isActive = pathname === url
+            return (
+              <SidebarMenuItem key={url}>
+                <SidebarMenuButton asChild className="relative">
+                  <Link
+                    href={url}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground hover:bg-muted'}`}
+                  >
+                    <Icon className="size-5 shrink-0" />
+                    <span className="truncate">{title}</span>
+                    {isActive && (
+                      <motion.span
+                        layoutId="sidebar-active"
+                        className="absolute inset-0 z-[-1] rounded-md bg-accent"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
         </SidebarMenu>
 
-        {/* Sekundäres Menü */}
-        {/*
-        <SidebarMenu>
-          <NavItem href="/documents/data-library" title="Data Library" icon={IconDatabase} />
-          <NavItem href="/documents/reports" title="Reports" icon={IconReport} />
-          <NavItem href="/documents/word-assistant" title="Word Assistant" icon={IconFileWord} />
-        </SidebarMenu>
-        */}
+        {/* Dokumente für später */}
+        {/* <NavDocuments items={documents} /> */}
 
         <SidebarMenu className="mt-auto">
-          <NavItem href="/settings" title="Settings" icon={IconSettings} />
-          <NavItem href="/help" title="Get Help" icon={IconHelp} />
-          {/* <NavItem href="/search" title="Search" icon={IconSearch} /> */}
+          {navSecondary.map(({ title, url, icon: Icon }) => {
+            const isActive = pathname === url
+            return (
+              <SidebarMenuItem key={url}>
+                <SidebarMenuButton asChild className="relative">
+                  <Link
+                    href={url}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground hover:bg-muted'}`}
+                  >
+                    <Icon className="size-5 shrink-0" />
+                    <span className="truncate">{title}</span>
+                    {isActive && (
+                      <motion.span
+                        layoutId="sidebar-active"
+                        className="absolute inset-0 z-[-1] rounded-md bg-accent"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
         </SidebarMenu>
       </SidebarContent>
 
