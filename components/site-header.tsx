@@ -41,7 +41,7 @@ export function SiteHeader({ className }: { className?: string }) {
             <span className="text-xs font-bold">PPP</span>
           </div>
           <span className="hidden text-sm font-semibold sm:inline-block">
-            ProductPhotoPop
+            PPP.io
           </span>
         </Link>
 

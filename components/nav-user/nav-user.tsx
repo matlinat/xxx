@@ -24,7 +24,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useTransition } from "react";
-import { logoutAction } from "@/app/(public)/(auth)/actions";
+import { logoutAction } from "@/app/(auth)/actions";
 
 export function NavUser({
   user,
