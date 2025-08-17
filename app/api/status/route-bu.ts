@@ -16,37 +16,28 @@ export async function GET(req: NextRequest) {
       .eq("id", id)
       .single();
 
-    if (error || !job) {
+    if (error) {
+      // 404 statt 500, damit das Frontend sauber reagieren kann
       return NextResponse.json({ error: "job not found" }, { status: 404 });
     }
 
-    // single (legacy)
     let downloadUrl: string | null = null;
     if (job.processed_path) {
-      const { data: signedSingle } = await supabaseAdmin.storage
-        .from(SUPA_BUCKET_PROC)
-        .createSignedUrl(job.processed_path, 60 * 10);
-      downloadUrl = signedSingle?.signedUrl ?? null;
-    }
-
-    // multiple (presets)
-    const downloadUrlsByPreset: Record<string, string> = {};
-    const presets: Array<{ presetId: string; processedPath: string }> =
-      job.meta?.presets ?? [];
-
-    for (const p of presets) {
       const { data: signed } = await supabaseAdmin.storage
         .from(SUPA_BUCKET_PROC)
-        .createSignedUrl(p.processedPath, 60 * 10);
-      if (signed?.signedUrl) downloadUrlsByPreset[p.presetId] = signed.signedUrl;
+        .createSignedUrl(job.processed_path, 60 * 10);
+      downloadUrl = signed?.signedUrl ?? null;
     }
 
     return NextResponse.json(
-      { status: job.status, downloadUrl, downloadUrlsByPreset },
-      { status: 200 }
+      { status: job.status, downloadUrl },
+      { status: 200 },
     );
   } catch (e: any) {
     console.error("[/api/status]", e?.message || e);
-    return NextResponse.json({ error: e?.message ?? "status failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: e?.message ?? "status failed" },
+      { status: 500 },
+    );
   }
 }
