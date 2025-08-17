@@ -148,14 +148,16 @@ export async function POST(req: NextRequest) {
     // 3) Alpha-Kante sanft
     cutout = await featherAlpha(cutout, 0.35);
 
-    // 4) Presets wählen: UI gibt white/transparent vor
+    // 4) Presets wählen anhand bgMode
     const chosenPresets =
       bgMode === "transparent"
         ? PRESETS.filter((p) => p.background === "transparent")
         : PRESETS.filter((p) => p.background !== "transparent");
 
     const results: { presetId: PresetId; processedPath: string }[] = [];
+    const downloadUrlsByPreset: Record<string, string> = {};
 
+    // 5) Rendern, speichern, sofort signieren
     for (const preset of chosenPresets) {
       const rendered = await composePreset(cutout, preset);
       const ext = preset.format === "png" ? "png" : preset.format === "jpeg" ? "jpg" : "webp";
@@ -174,25 +176,48 @@ export async function POST(req: NextRequest) {
         });
       if (upErr) throw upErr;
 
+      // sofort signieren, damit Frontend nicht warten muss
+      const { data: signedDl } = await supabaseAdmin.storage
+        .from(SUPA_BUCKET_PROC)
+        .createSignedUrl(processedPath, 60 * 10);
+
+      if (signedDl?.signedUrl) {
+        downloadUrlsByPreset[preset.id] = signedDl.signedUrl;
+      }
       results.push({ presetId: preset.id, processedPath });
     }
 
-    // 5) Job updaten (meta optional – falls Spalte fehlt, nicht crashen)
+    // 6) DB-Update (best effort, mit Fallback ohne meta)
     try {
-      await supabaseAdmin
+      const { error: updErr } = await supabaseAdmin
         .from("ppp_jobs")
         .update({
           status: "done",
-          processed_path: results[0]?.processedPath ?? null, // legacy
+          processed_path: results[0]?.processedPath ?? null,
           meta: { presets: results },
         })
         .eq("id", job.id);
-    } catch {
-      await supabaseAdmin.from("ppp_jobs").update({ status: "done", processed_path: results[0]?.processedPath ?? null }).eq("id", job.id);
+      if (updErr) throw updErr;
+    } catch (e) {
+      console.error("[/api/process] update with meta failed, trying fallback:", (e as any)?.message);
+      const { error: updErr2 } = await supabaseAdmin
+        .from("ppp_jobs")
+        .update({
+          status: "done",
+          processed_path: results[0]?.processedPath ?? null,
+        })
+        .eq("id", job.id);
+      if (updErr2) console.error("[/api/process] fallback update failed:", updErr2.message);
     }
 
+    // 7) Sofort-Response mit Download-URLs (verhindert „Hängenbleiben“)
     return NextResponse.json(
-      { jobId: job.id, processed: results, processedPath: results[0]?.processedPath ?? null },
+      {
+        jobId: job.id,
+        processed: results,
+        processedPath: results[0]?.processedPath ?? null,
+        downloadUrlsByPreset, // NEU
+      },
       { status: 200 }
     );
   } catch (e: any) {

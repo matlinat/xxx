@@ -75,10 +75,31 @@ export function ProductTool() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ originalPath: sign.path, bgMode }),
       });
-      const proc: { error?: string; jobId?: string } = await procRes.json();
+      const proc: {
+        error?: string;
+        jobId?: string;
+        downloadUrlsByPreset?: Record<string, string>;
+      } = await procRes.json();
       if (proc.error || !proc.jobId) throw new Error(proc.error ?? "Job-ID fehlt.");
 
-      // 4) Polling: Stopp bereits bei status=done (auch ohne single downloadUrl)
+      // 3a) Sofort fertig, wenn Prozess-Response bereits Links hat
+      if (proc.downloadUrlsByPreset && Object.keys(proc.downloadUrlsByPreset).length) {
+        const urls = proc.downloadUrlsByPreset;
+        const preferred =
+          urls["amazon_main"] ||
+          urls["shopify_pdp"] ||
+          urls["web_optimized"] ||
+          urls["transparent_packshot"] ||
+          Object.values(urls)[0];
+
+        setAllPresetUrls(urls);
+        setResultUrl(preferred);
+        setLoading(false);
+        setMsg("Fertig ✅");
+        return; // kein Polling notwendig
+      }
+
+      // 3b) Fallback: Polling
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         try {
@@ -89,7 +110,6 @@ export function ProductTool() {
           if (st.status === "done") {
             if (pollRef.current) clearInterval(pollRef.current);
 
-            // Bevorzugt Amazon, sonst erstes vorhandenes
             const urls = st.downloadUrlsByPreset || {};
             const preferred =
               urls["amazon_main"] ||
@@ -181,14 +201,11 @@ export function ProductTool() {
                   <a href={resultUrl} download>Ergebnis herunterladen</a>
                 </Button>
 
-                {/* Optional: alle Presets als Download-Buttons */}
                 {allPresetUrls && (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {Object.entries(allPresetUrls).map(([presetId, url]) => (
                       <Button key={presetId} variant="outline" asChild>
-                        <a href={url} download>
-                          {presetId.replace(/_/g, " ")}
-                        </a>
+                        <a href={url} download>{presetId.replace(/_/g, " ")}</a>
                       </Button>
                     ))}
                   </div>
