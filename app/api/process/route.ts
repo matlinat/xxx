@@ -70,16 +70,31 @@ const PRESETS: Preset[] = [
   { id: "web_optimized", label: "Web Optimized", width: 1600, height: 1600, background: "white", fill: 0.85, format: "webp", quality: 80 },
 ];
 
-async function softShadowFromAlpha(cutout: Buffer, scale = 0.94, blurSigma = 16): Promise<Buffer> {
-  const meta = await sharp(cutout).metadata();
-  const w = meta.width ?? 1;
-  const h = meta.height ?? 1;
-  const resized = await sharp(cutout)
+async function softShadowFromAlpha(
+  fgRgba: Buffer,
+  scale = 0.94,
+  blurSigma = 16
+): Promise<Buffer> {
+  const meta = await sharp(fgRgba).metadata();
+  const w = Math.max(1, meta.width ?? 1);
+  const h = Math.max(1, meta.height ?? 1);
+
+  const resized = await sharp(fgRgba)
     .ensureAlpha()
     .resize({ width: Math.round(w * scale), height: Math.round(h * scale), fit: "inside", withoutEnlargement: true })
     .png()
     .toBuffer();
-  return sharp(resized).extractChannel("alpha").toColourspace("b-w").blur(blurSigma).png().toBuffer();
+
+  // 1) Alphamaske erzeugen (ein Kanal)
+  const mask = await sharp(resized).extractChannel("alpha").blur(blurSigma).toBuffer();
+
+  // 2) Schwarzes RGB + Maske als Alpha => echtes RGBA
+  const blackRGB = await sharp({
+    create: { width: (await sharp(resized).metadata()).width!, height: (await sharp(resized).metadata()).height!, channels: 3, background: { r: 0, g: 0, b: 0 } },
+  }).png().toBuffer();
+
+  const shadowRGBA = await sharp(blackRGB).joinChannel(mask).png().toBuffer();
+  return shadowRGBA;
 }
 
 async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
@@ -88,7 +103,6 @@ async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
   const shortTarget = Math.min(targetW, targetH);
   const objectMax = Math.round(shortTarget * preset.fill);
 
-  // Vordergrund sauber vorbereiten (RGBA)
   const fgRGBA = await sharp(cutout)
     .toColorspace("srgb")
     .resize({ width: objectMax, height: objectMax, fit: "inside", withoutEnlargement: false })
@@ -96,47 +110,38 @@ async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
     .toBuffer();
 
   if (preset.background === "white") {
-    // 1) RGB-Canvas (ohne Alpha) in reinem Weiß
-    let base = sharp({
+    // Weißes RGB-Canvas (keine Alpha)
+    const base = sharp({
       create: { width: targetW, height: targetH, channels: 3, background: "#ffffff" },
     });
 
-    // 2) Schatten aus Alphakanal (Graustufen) und auf Weiß „multiply“-en
-    const shadow = await softShadowFromAlpha(fgRGBA, 0.94, 16);
-    // 3) Vordergrund vorher auf Weiß flatten -> kein Alpha mehr
-    const fgOnWhite = await sharp(fgRGBA).flatten({ background: "#ffffff" }).toBuffer();
+    // Schatten als echtes RGBA (schwarz + Alpha)
+    const shadowRGBA = await softShadowFromAlpha(fgRGBA, 0.94, 16);
+
+    // Vordergrund auf Weiß „flatten“, damit garantiert kein Alpha übrig bleibt
+    const fgOnWhite = await sharp(fgRGBA).flatten({ background: "#ffffff" }).png().toBuffer();
 
     const composed = await base
       .composite([
-        { input: shadow, gravity: "center", blend: "multiply" },
+        { input: shadowRGBA, gravity: "center" }, // normaler Overlay mit Alpha
         { input: fgOnWhite, gravity: "center" },
       ])
       .toBuffer();
 
-    // Export ohne Alpha
-    if (preset.format === "jpeg") {
-      return sharp(composed).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
-    }
-    if (preset.format === "webp") {
-      return sharp(composed).webp({ quality: preset.quality ?? 80 }).toBuffer();
-    }
-    // PNG für „weiß“ ist ungewöhnlich, aber zur Sicherheit:
+    if (preset.format === "jpeg") return sharp(composed).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
+    if (preset.format === "webp") return sharp(composed).webp({ quality: preset.quality ?? 80 }).toBuffer();
     return sharp(composed).png().toBuffer();
   }
 
-  // ------- Transparentes Preset (behält Alpha) --------
+  // Transparent: RGBA-Canvas
   const base = sharp({
     create: { width: targetW, height: targetH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
   }).png();
 
-  const composed = await base
-    .composite([{ input: fgRGBA, gravity: "center" }])
-    .toBuffer();
+  const composed = await base.composite([{ input: fgRGBA, gravity: "center" }]).toBuffer();
 
-  // PNG (mit Alpha) für transparent, sonst flatten auf Weiß (failsafe)
   if (preset.format === "png") return sharp(composed).png().toBuffer();
-  if (preset.format === "jpeg")
-    return sharp(composed).flatten({ background: "#ffffff" }).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
+  if (preset.format === "jpeg") return sharp(composed).flatten({ background: "#ffffff" }).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
   return sharp(composed).flatten({ background: "#ffffff" }).webp({ quality: preset.quality ?? 80 }).toBuffer();
 }
 
