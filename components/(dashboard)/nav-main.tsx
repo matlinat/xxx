@@ -1,65 +1,63 @@
 "use client"
 
-import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import {
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
-import { IconPlus } from "@tabler/icons-react"
 
 type NavItem = {
   title: string
   url: string
-  icon?: React.ComponentType<{ className?: string }>
+  icon?: React.ElementType
   highlight?: boolean
 }
 
-type NavMainProps = {
+export function NavMain({
+  items,
+  className,
+}: {
   items: NavItem[]
   className?: string
-}
-
-export function NavMain({ items, className }: NavMainProps) {
+}) {
   const pathname = usePathname()
 
-  // Quick Create explizit herausfiltern
-  const quickCreate = items.find((i) => i.highlight)
-  const normalItems = items.filter((i) => !i.highlight)
-
   return (
-    <nav className={cn("flex flex-col gap-1", className)}>
-      {/* Quick Create oben */}
-      {quickCreate && (
-        <Link
-          href={quickCreate.url}
-          className={cn(
-            "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium",
-            "bg-accent/70 text-accent-foreground hover:bg-accent transition-colors"
-          )}
-        >
-          <IconPlus className="size-4" />
-          {quickCreate.title}
-        </Link>
-      )}
-
-      {/* Restliche Menüpunkte */}
-      {normalItems.map((item) => {
+    <SidebarMenu className={className}>
+      {items.map((item) => {
+        const Icon = item.icon
         const isActive = pathname === item.url
+
         return (
-          <Link
-            key={item.title}
-            href={item.url}
-            className={cn(
-              "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-              isActive
-                ? "bg-accent text-accent-foreground font-medium"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-            )}
-          >
-            {item.icon && <item.icon className="size-4" />}
-            {item.title}
-          </Link>
+          <SidebarMenuItem key={item.title}>
+            <SidebarMenuButton
+              asChild
+              className={cn(
+                "flex items-center gap-2 rounded-md transition-all",
+                // Normal links
+                !item.highlight &&
+                  cn(
+                    "px-3 py-2 text-sm",
+                    isActive
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "hover:bg-sidebar-accent/50"
+                  ),
+                // Highlight CTA
+                item.highlight &&
+                  "mt-3 mb-5 w-full px-4 py-3 text-base font-semibold bg-background text-foreground border shadow-sm hover:shadow-lg hover:scale-[1.01]"
+              )}
+            >
+              <Link href={item.url} className="flex items-center gap-2 w-full">
+                {Icon ? <Icon className="size-5 shrink-0" /> : null}
+                <span>{item.title}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         )
       })}
-    </nav>
+    </SidebarMenu>
   )
 }
