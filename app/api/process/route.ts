@@ -8,7 +8,7 @@ import {
   SUPA_BUCKET_PROC,
 } from "@/lib/supabase/admin";
 
-export const runtime = "nodejs"; // wichtig: Sharp braucht Node-Runtime
+export const runtime = "nodejs"; // Sharp benötigt Node-Runtime
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
@@ -18,10 +18,6 @@ const replicate = new Replicate({
 const MODEL_VERSION =
   process.env.REPLICATE_BG_VERSION ||
   "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003";
-
-// optionales Upscale-Modell (wird hier nicht genutzt; Hook bleibt für später)
-const UPSCALE_MODEL =
-  process.env.REPLICATE_UPSCALE_VERSION || "nightmareai/real-esrgan:latest";
 
 // ===== Helpers =====
 async function fetchBuffer(url: string): Promise<Buffer> {
@@ -40,38 +36,12 @@ function extractUrl(output: any): string {
   throw new Error("Unexpected Replicate output format");
 }
 
-// sRGB + PNG + EXIF-Rotation
-async function normalizePNG(input: Buffer): Promise<Buffer> {
-  return sharp(input).rotate().toColorspace("srgb").png().toBuffer();
-}
-
-// Kanten-Feather OHNE premultiply/unpremultiply:
-// 1) ensureAlpha, 2) Alphakanal minimal blurren, 3) RGB + neue Alpha recomposen
+// Alphakante sanft – ohne premultiply/unpremultiply
 async function featherAlpha(cutout: Buffer, sigma = 0.35): Promise<Buffer> {
   const withAlpha = await sharp(cutout).ensureAlpha().png().toBuffer();
   const alpha = await sharp(withAlpha).extractChannel("alpha").blur(sigma).toBuffer();
   const rgb = await sharp(withAlpha).removeAlpha().toBuffer();
   return sharp(rgb).joinChannel(alpha).png().toBuffer();
-}
-
-// Soft-Shadow aus Alphakanal (nur sinnvoll bei weißem Hintergrund)
-async function softShadowFromAlpha(cutout: Buffer, scale = 0.94, blurSigma = 16): Promise<Buffer> {
-  const meta = await sharp(cutout).metadata();
-  const w = meta.width ?? 1;
-  const h = meta.height ?? 1;
-
-  const resized = await sharp(cutout)
-    .ensureAlpha()
-    .resize({ width: Math.round(w * scale), height: Math.round(h * scale), fit: "inside", withoutEnlargement: true })
-    .png()
-    .toBuffer();
-
-  return sharp(resized)
-    .extractChannel("alpha")
-    .toColourspace("b-w")
-    .blur(blurSigma)
-    .png()
-    .toBuffer();
 }
 
 type PresetId =
@@ -87,7 +57,7 @@ type Preset = {
   width: number;
   height: number;
   background: "white" | "transparent";
-  fill: number; // Anteil der kürzeren Zielkante, die das Objekt belegen soll
+  fill: number; // Anteil der kürzeren Zielkante
   format: "jpeg" | "png" | "webp";
   quality?: number;
 };
@@ -100,7 +70,18 @@ const PRESETS: Preset[] = [
   { id: "web_optimized", label: "Web Optimized", width: 1600, height: 1600, background: "white", fill: 0.85, format: "webp", quality: 80 },
 ];
 
-// Preset-Composer
+async function softShadowFromAlpha(cutout: Buffer, scale = 0.94, blurSigma = 16): Promise<Buffer> {
+  const meta = await sharp(cutout).metadata();
+  const w = meta.width ?? 1;
+  const h = meta.height ?? 1;
+  const resized = await sharp(cutout)
+    .ensureAlpha()
+    .resize({ width: Math.round(w * scale), height: Math.round(h * scale), fit: "inside", withoutEnlargement: true })
+    .png()
+    .toBuffer();
+  return sharp(resized).extractChannel("alpha").toColourspace("b-w").blur(blurSigma).png().toBuffer();
+}
+
 async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
   const targetW = preset.width;
   const targetH = preset.height;
@@ -118,17 +99,13 @@ async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
       ? { r: 255, g: 255, b: 255, alpha: 1 }
       : { r: 0, g: 0, b: 0, alpha: 0 };
 
-  const base = sharp({
-    create: { width: targetW, height: targetH, channels: 4, background: bg },
-  }).png();
+  const base = sharp({ create: { width: targetW, height: targetH, channels: 4, background: bg } }).png();
 
   const overlays: sharp.OverlayOptions[] = [];
-
   if (preset.background === "white") {
     const shadow = await softShadowFromAlpha(fgResized, 0.94, 16);
     overlays.push({ input: shadow, gravity: "center", blend: "multiply" });
   }
-
   overlays.push({ input: fgResized, gravity: "center" });
 
   const composed = await base.composite(overlays).toBuffer();
@@ -139,7 +116,6 @@ async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
   return sharp(composed).flatten({ background: "#ffffff" }).webp({ quality: preset.quality ?? 80 }).toBuffer();
 }
 
-// ===== Route =====
 export async function POST(req: NextRequest) {
   try {
     const { originalPath, userId, bgMode } = await req.json();
@@ -164,22 +140,15 @@ export async function POST(req: NextRequest) {
       .createSignedUrl(originalPath, 60 * 10);
     if (signErr) throw signErr;
 
-    // 2) (optional) Normalisierung laden – hier nicht zwingend benötigt, da wir rembg per URL füttern
-    // const original = await fetchBuffer(signed.signedUrl);
-    // const normalized = await normalizePNG(original);
-
-    // 3) Replicate: Freistellen
-    const rmOut: any = await replicate.run(MODEL_VERSION as any, {
-      input: { image: signed.signedUrl },
-    });
+    // 2) Replicate (Freistellen)
+    const rmOut: any = await replicate.run(MODEL_VERSION as any, { input: { image: signed.signedUrl } });
     const rmUrl = extractUrl(rmOut);
     let cutout = await fetchBuffer(rmUrl);
 
-    // 4) Alpha-Feather statt premultiply/unpremultiply
+    // 3) Alpha-Kante sanft
     cutout = await featherAlpha(cutout, 0.35);
 
-    // 5) Ein Preset basierend auf UI-Selection (bgMode) oder alle Presets:
-    // Du hattest im UI 'bgMode' (white/transparent). Wir erzeugen beide Welten per Presets.
+    // 4) Presets wählen: UI gibt white/transparent vor
     const chosenPresets =
       bgMode === "transparent"
         ? PRESETS.filter((p) => p.background === "transparent")
@@ -208,23 +177,22 @@ export async function POST(req: NextRequest) {
       results.push({ presetId: preset.id, processedPath });
     }
 
-    // 6) Job updaten
-    await supabaseAdmin
-      .from("ppp_jobs")
-      .update({
-        status: "done",
-        processed_path: results[0]?.processedPath ?? null, // backward-compat
-        meta: { presets: results },
-      })
-      .eq("id", job.id);
+    // 5) Job updaten (meta optional – falls Spalte fehlt, nicht crashen)
+    try {
+      await supabaseAdmin
+        .from("ppp_jobs")
+        .update({
+          status: "done",
+          processed_path: results[0]?.processedPath ?? null, // legacy
+          meta: { presets: results },
+        })
+        .eq("id", job.id);
+    } catch {
+      await supabaseAdmin.from("ppp_jobs").update({ status: "done", processed_path: results[0]?.processedPath ?? null }).eq("id", job.id);
+    }
 
-    // 7) Antwort
     return NextResponse.json(
-      {
-        jobId: job.id,
-        processed: results,
-        processedPath: results[0]?.processedPath ?? null, // legacy
-      },
+      { jobId: job.id, processed: results, processedPath: results[0]?.processedPath ?? null },
       { status: 200 }
     );
   } catch (e: any) {
