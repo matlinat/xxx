@@ -64,7 +64,7 @@ export function AppSidebar(
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarMenu>
+        <SidebarMenu className="px-3 py-2">
           {navItems.map(({ title, url, icon: Icon }) => {
             const isActive = pathname === url
             return (
@@ -93,7 +93,7 @@ export function AppSidebar(
         {/* Dokumente für später */}
         {/* <NavDocuments items={documents} /> */}
 
-        <SidebarMenu className="mt-auto">
+        <SidebarMenu className="mt-auto ">
           {navSecondary.map(({ title, url, icon: Icon }) => {
             const isActive = pathname === url
             return (
