@@ -8,18 +8,17 @@ import {
   SUPA_BUCKET_PROC,
 } from "@/lib/supabase/admin";
 
-export const runtime = "nodejs"; // Sharp benötigt Node-Runtime
+export const runtime = "nodejs";
 
 const replicate = new Replicate({
   auth: process.env.REPLICATE_API_TOKEN!,
 });
 
-// Rembg-Version (via ENV überschreibbar)
 const MODEL_VERSION =
   process.env.REPLICATE_BG_VERSION ||
   "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003";
 
-// ===== Helpers =====
+// ---------- Helpers ----------
 async function fetchBuffer(url: string): Promise<Buffer> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`download failed: ${r.status}`);
@@ -36,12 +35,17 @@ function extractUrl(output: any): string {
   throw new Error("Unexpected Replicate output format");
 }
 
-// Alphakante sanft – ohne premultiply/unpremultiply
+// sRGB + PNG + EXIF-Rotation (immer definiertes Format)
+async function normalizeToPNG(input: Buffer): Promise<Buffer> {
+  return sharp(input).rotate().toColorspace("srgb").png().toBuffer();
+}
+
+// Alpha sanft (alle Stufen explizit als PNG encodieren!)
 async function featherAlpha(cutout: Buffer, sigma = 0.35): Promise<Buffer> {
-  const withAlpha = await sharp(cutout).ensureAlpha().png().toBuffer();
-  const alpha = await sharp(withAlpha).extractChannel("alpha").blur(sigma).toBuffer();
-  const rgb = await sharp(withAlpha).removeAlpha().toBuffer();
-  return sharp(rgb).joinChannel(alpha).png().toBuffer();
+  const withAlphaPng = await sharp(cutout).ensureAlpha().png().toBuffer();
+  const alphaPng = await sharp(withAlphaPng).extractChannel("alpha").blur(sigma).png().toBuffer();
+  const rgbPng = await sharp(withAlphaPng).removeAlpha().png().toBuffer();
+  return sharp(rgbPng).joinChannel(alphaPng).png().toBuffer();
 }
 
 type PresetId =
@@ -57,7 +61,7 @@ type Preset = {
   width: number;
   height: number;
   background: "white" | "transparent";
-  fill: number; // Anteil der kürzeren Zielkante
+  fill: number;
   format: "jpeg" | "png" | "webp";
   quality?: number;
 };
@@ -70,49 +74,17 @@ const PRESETS: Preset[] = [
   { id: "web_optimized", label: "Web Optimized", width: 1600, height: 1600, background: "white", fill: 0.85, format: "webp", quality: 80 },
 ];
 
-async function softShadowFromAlpha(
-  fgRgba: Buffer,
-  scale = 0.94,
-  blurSigma = 16
-): Promise<Buffer> {
-  const meta = await sharp(fgRgba).metadata();
-  const w = Math.max(1, meta.width ?? 1);
-  const h = Math.max(1, meta.height ?? 1);
-
-  const resized = await sharp(fgRgba)
-    .ensureAlpha()
-    .resize({ width: Math.round(w * scale), height: Math.round(h * scale), fit: "inside", withoutEnlargement: true })
-    .png()
-    .toBuffer();
-
-  // 1) Alphamaske erzeugen (ein Kanal)
-  const mask = await sharp(resized).extractChannel("alpha").blur(blurSigma).toBuffer();
-
-  // 2) Schwarzes RGB + Maske als Alpha => echtes RGBA
-  const blackRGB = await sharp({
-    create: { width: (await sharp(resized).metadata()).width!, height: (await sharp(resized).metadata()).height!, channels: 3, background: { r: 0, g: 0, b: 0 } },
-  }).png().toBuffer();
-
-  const shadowRGBA = await sharp(blackRGB).joinChannel(mask).png().toBuffer();
-  return shadowRGBA;
-}
-
-// ersetzt die bisherige composePreset-Funktion (ohne Schatten, stabil)
+// Komposition ohne Schatten (stabil, kein Alpha-Leak)
 async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
   const targetW = preset.width;
   const targetH = preset.height;
   const shortTarget = Math.min(targetW, targetH);
   const objectMax = Math.round(shortTarget * preset.fill);
 
-  // Vordergrund als RGBA vorbereiten
+  // FG immer als PNG (RGBA) skalieren
   const fgRGBA = await sharp(cutout)
     .toColorspace("srgb")
-    .resize({
-      width: objectMax,
-      height: objectMax,
-      fit: "inside",
-      withoutEnlargement: false,
-    })
+    .resize({ width: objectMax, height: objectMax, fit: "inside", withoutEnlargement: false })
     .png()
     .toBuffer();
 
@@ -122,52 +94,38 @@ async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
       create: { width: targetW, height: targetH, channels: 3, background: "#ffffff" },
     });
 
-    // Vordergrund auf Weiß „flatten“, damit garantiert kein Alpha mehr übrig bleibt
-    const fgOnWhite = await sharp(fgRGBA).flatten({ background: "#ffffff" }).toBuffer();
+    // FG auf Weiß flatten → kein Alpha mehr
+    const fgOnWhite = await sharp(fgRGBA).flatten({ background: "#ffffff" }).png().toBuffer();
 
-    const composed = await base
-      .composite([{ input: fgOnWhite, gravity: "center" }])
-      .toBuffer();
+    const composed = await base.composite([{ input: fgOnWhite, gravity: "center" }]).png().toBuffer();
 
-    // Export ohne Alpha
-    if (preset.format === "jpeg") {
-      return sharp(composed).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
-    }
-    if (preset.format === "webp") {
-      return sharp(composed).webp({ quality: preset.quality ?? 80 }).toBuffer();
-    }
-    // PNG ist hier eher selten, aber falls definiert:
+    // Export
+    if (preset.format === "jpeg") return sharp(composed).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
+    if (preset.format === "webp") return sharp(composed).webp({ quality: preset.quality ?? 80 }).toBuffer();
     return sharp(composed).png().toBuffer();
   }
 
-  // ---------- Transparent (behält Alpha) ----------
+  // Transparentes Canvas (RGBA)
   const base = sharp({
     create: { width: targetW, height: targetH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
   }).png();
 
-  const composed = await base
-    .composite([{ input: fgRGBA, gravity: "center" }])
-    .toBuffer();
+  const composed = await base.composite([{ input: fgRGBA, gravity: "center" }]).png().toBuffer();
 
   if (preset.format === "png") return sharp(composed).png().toBuffer();
-  if (preset.format === "jpeg")
-    return sharp(composed).flatten({ background: "#ffffff" }).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
+  if (preset.format === "jpeg") return sharp(composed).flatten({ background: "#ffffff" }).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
   return sharp(composed).flatten({ background: "#ffffff" }).webp({ quality: preset.quality ?? 80 }).toBuffer();
 }
 
-
-
+// ---------- Route ----------
 export async function POST(req: NextRequest) {
   try {
     const { originalPath, userId, bgMode } = await req.json();
-    if (!originalPath) {
-      return NextResponse.json({ error: "originalPath required" }, { status: 400 });
-    }
-    if (!process.env.REPLICATE_API_TOKEN) {
+    if (!originalPath) return NextResponse.json({ error: "originalPath required" }, { status: 400 });
+    if (!process.env.REPLICATE_API_TOKEN)
       return NextResponse.json({ error: "Missing REPLICATE_API_TOKEN" }, { status: 500 });
-    }
 
-    // 0) Job anlegen
+    // Job
     const { data: job, error: jobErr } = await supabaseAdmin
       .from("ppp_jobs")
       .insert([{ user_id: userId ?? null, original_path: originalPath, status: "processing" }])
@@ -175,21 +133,24 @@ export async function POST(req: NextRequest) {
       .single();
     if (jobErr) throw jobErr;
 
-    // 1) signierte URL fürs Original
+    // Original
     const { data: signed, error: signErr } = await supabaseAdmin
       .storage.from(SUPA_BUCKET_ORIG)
       .createSignedUrl(originalPath, 60 * 10);
     if (signErr) throw signErr;
 
-    // 2) Replicate (Freistellen)
+    // Replicate (Freistellen)
     const rmOut: any = await replicate.run(MODEL_VERSION as any, { input: { image: signed.signedUrl } });
     const rmUrl = extractUrl(rmOut);
     let cutout = await fetchBuffer(rmUrl);
 
-    // 3) Alpha-Kante sanft
+    // Sicherheit: immer echte PNG
+    cutout = await normalizeToPNG(cutout);
+
+    // Alpha sanft
     cutout = await featherAlpha(cutout, 0.35);
 
-    // 4) Presets wählen anhand bgMode
+    // Presets nach Auswahl
     const chosenPresets =
       bgMode === "transparent"
         ? PRESETS.filter((p) => p.background === "transparent")
@@ -198,7 +159,6 @@ export async function POST(req: NextRequest) {
     const results: { presetId: PresetId; processedPath: string }[] = [];
     const downloadUrlsByPreset: Record<string, string> = {};
 
-    // 5) Rendern, speichern, sofort signieren
     for (const preset of chosenPresets) {
       const rendered = await composePreset(cutout, preset);
       const ext = preset.format === "png" ? "png" : preset.format === "jpeg" ? "jpg" : "webp";
@@ -217,18 +177,15 @@ export async function POST(req: NextRequest) {
         });
       if (upErr) throw upErr;
 
-      // sofort signieren, damit Frontend nicht warten muss
       const { data: signedDl } = await supabaseAdmin.storage
         .from(SUPA_BUCKET_PROC)
         .createSignedUrl(processedPath, 60 * 10);
+      if (signedDl?.signedUrl) downloadUrlsByPreset[preset.id] = signedDl.signedUrl;
 
-      if (signedDl?.signedUrl) {
-        downloadUrlsByPreset[preset.id] = signedDl.signedUrl;
-      }
       results.push({ presetId: preset.id, processedPath });
     }
 
-    // 6) DB-Update (best effort, mit Fallback ohne meta)
+    // DB-Update (best effort)
     try {
       const { error: updErr } = await supabaseAdmin
         .from("ppp_jobs")
@@ -240,29 +197,19 @@ export async function POST(req: NextRequest) {
         .eq("id", job.id);
       if (updErr) throw updErr;
     } catch (e) {
-      console.error("[/api/process] update with meta failed, trying fallback:", (e as any)?.message);
-      const { error: updErr2 } = await supabaseAdmin
+      console.error("[process] meta update failed, fallback:", (e as any)?.message);
+      await supabaseAdmin
         .from("ppp_jobs")
-        .update({
-          status: "done",
-          processed_path: results[0]?.processedPath ?? null,
-        })
+        .update({ status: "done", processed_path: results[0]?.processedPath ?? null })
         .eq("id", job.id);
-      if (updErr2) console.error("[/api/process] fallback update failed:", updErr2.message);
     }
 
-    // 7) Sofort-Response mit Download-URLs (verhindert „Hängenbleiben“)
     return NextResponse.json(
-      {
-        jobId: job.id,
-        processed: results,
-        processedPath: results[0]?.processedPath ?? null,
-        downloadUrlsByPreset, // NEU
-      },
+      { jobId: job.id, processed: results, processedPath: results[0]?.processedPath ?? null, downloadUrlsByPreset },
       { status: 200 }
     );
   } catch (e: any) {
-    console.error("[/api/process]", e?.message || e);
+    console.error("[/api/process]", e?.stack || e?.message || e);
     return NextResponse.json({ error: e?.message ?? "processing failed" }, { status: 500 });
   }
 }
