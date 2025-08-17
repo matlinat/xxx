@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   IconCreditCard,
   IconDotsVertical,
@@ -97,32 +96,30 @@ export function NavUser({
             </DropdownMenuLabel>
 
             <DropdownMenuSeparator />
-
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="/account" className="flex items-center gap-2">
-                  <IconUserCircle className="size-4" />
-                  <span>Account</span>
-                </Link>
+                <a href="/account">
+                  <IconUserCircle />
+                  Account
+                </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/billing" className="flex items-center gap-2">
-                  <IconCreditCard className="size-4" />
-                  <span>Billing</span>
-                </Link>
+                <a href="/billing">
+                  <IconCreditCard />
+                  Billing
+                </a>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/notifications" className="flex items-center gap-2">
-                  <IconNotification className="size-4" />
-                  <span>Notifications</span>
-                </Link>
+                <a href="/notifications">
+                  <IconNotification />
+                  Notifications
+                </a>
               </DropdownMenuItem>
             </DropdownMenuGroup>
 
             <DropdownMenuSeparator />
-
             <DropdownMenuItem onSelect={onLogout} disabled={pending}>
-              <IconLogout className="size-4" />
+              <IconLogout />
               {pending ? "Logging out…" : "Log out"}
             </DropdownMenuItem>
           </DropdownMenuContent>

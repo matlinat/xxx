@@ -64,7 +64,7 @@ export function AppSidebar(
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarMenu className="px-3 py-2">
+        <SidebarMenu >
           {navItems.map(({ title, url, icon: Icon }) => {
             const isActive = pathname === url
             return (
