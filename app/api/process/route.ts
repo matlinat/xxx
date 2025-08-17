@@ -88,33 +88,58 @@ async function composePreset(cutout: Buffer, preset: Preset): Promise<Buffer> {
   const shortTarget = Math.min(targetW, targetH);
   const objectMax = Math.round(shortTarget * preset.fill);
 
-  const fgResized = await sharp(cutout)
+  // Vordergrund sauber vorbereiten (RGBA)
+  const fgRGBA = await sharp(cutout)
     .toColorspace("srgb")
     .resize({ width: objectMax, height: objectMax, fit: "inside", withoutEnlargement: false })
     .png()
     .toBuffer();
 
-  const bg =
-    preset.background === "white"
-      ? { r: 255, g: 255, b: 255, alpha: 1 }
-      : { r: 0, g: 0, b: 0, alpha: 0 };
-
-  const base = sharp({ create: { width: targetW, height: targetH, channels: 4, background: bg } }).png();
-
-  const overlays: sharp.OverlayOptions[] = [];
   if (preset.background === "white") {
-    const shadow = await softShadowFromAlpha(fgResized, 0.94, 16);
-    overlays.push({ input: shadow, gravity: "center", blend: "multiply" });
+    // 1) RGB-Canvas (ohne Alpha) in reinem Weiß
+    let base = sharp({
+      create: { width: targetW, height: targetH, channels: 3, background: "#ffffff" },
+    });
+
+    // 2) Schatten aus Alphakanal (Graustufen) und auf Weiß „multiply“-en
+    const shadow = await softShadowFromAlpha(fgRGBA, 0.94, 16);
+    // 3) Vordergrund vorher auf Weiß flatten -> kein Alpha mehr
+    const fgOnWhite = await sharp(fgRGBA).flatten({ background: "#ffffff" }).toBuffer();
+
+    const composed = await base
+      .composite([
+        { input: shadow, gravity: "center", blend: "multiply" },
+        { input: fgOnWhite, gravity: "center" },
+      ])
+      .toBuffer();
+
+    // Export ohne Alpha
+    if (preset.format === "jpeg") {
+      return sharp(composed).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
+    }
+    if (preset.format === "webp") {
+      return sharp(composed).webp({ quality: preset.quality ?? 80 }).toBuffer();
+    }
+    // PNG für „weiß“ ist ungewöhnlich, aber zur Sicherheit:
+    return sharp(composed).png().toBuffer();
   }
-  overlays.push({ input: fgResized, gravity: "center" });
 
-  const composed = await base.composite(overlays).toBuffer();
+  // ------- Transparentes Preset (behält Alpha) --------
+  const base = sharp({
+    create: { width: targetW, height: targetH, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
+  }).png();
 
+  const composed = await base
+    .composite([{ input: fgRGBA, gravity: "center" }])
+    .toBuffer();
+
+  // PNG (mit Alpha) für transparent, sonst flatten auf Weiß (failsafe)
   if (preset.format === "png") return sharp(composed).png().toBuffer();
   if (preset.format === "jpeg")
     return sharp(composed).flatten({ background: "#ffffff" }).jpeg({ quality: preset.quality ?? 85 }).toBuffer();
   return sharp(composed).flatten({ background: "#ffffff" }).webp({ quality: preset.quality ?? 80 }).toBuffer();
 }
+
 
 export async function POST(req: NextRequest) {
   try {
