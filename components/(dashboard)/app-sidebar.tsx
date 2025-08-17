@@ -2,61 +2,67 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import {
-  IconCamera, IconChartBar, IconDashboard, IconDatabase, IconFileAi,
-  IconFileDescription, IconFileWord, IconFolder, IconHelp, IconInnerShadowTop,
-  IconListDetails, IconReport, IconSearch, IconSettings,
+  IconChartBar,
+  IconDashboard,
+  IconFolder,
+  IconHelp,
+  IconInnerShadowTop,
+  IconListDetails,
+  IconPlus,
+  IconSettings,
 } from "@tabler/icons-react"
-import { motion } from "framer-motion"
 
 import { NavMain } from "@/components/(dashboard)/nav-main"
 import { NavSecondary } from "@/components/(dashboard)/nav-secondary"
+// import { NavDocuments } from "@/components/(dashboard)/nav-documents"
 import { NavUser } from "@/components/nav-user/nav-user"
+
 import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarHeader,
-  SidebarMenu, SidebarMenuButton, SidebarMenuItem,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const navItems = [
-  { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
-  { title: "Quick Create", url: "/quick-create", icon: IconCamera },
-  { title: "Job History", url: "/job-history", icon: IconListDetails },
-  { title: "Projects", url: "/projects", icon: IconFolder },
-]
+type UIUser = {
+  name: string
+  email: string
+  avatar: string
+}
 
-const navSecondary = [
-  { title: "Settings", url: "/settings", icon: IconSettings },
-  { title: "Get Help", url: "/help", icon: IconHelp },
-  // { title: "Search", url: "/search", icon: IconSearch },
-]
+const data = {
+  navMain: [
+    { title: "Quick Create", url: "/quick-create", icon: IconPlus, highlight: true },
+    { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
+    { title: "Job History", url: "/job-history", icon: IconListDetails },
+    { title: "Analytics", url: "/analytics", icon: IconChartBar },
+    { title: "Projects", url: "/projects", icon: IconFolder },
+  ],
+  // navClouds und documents aktuell nicht benötigt
+  navSecondary: [
+    { title: "Settings", url: "/settings", icon: IconSettings },
+    { title: "Get Help", url: "/get-help", icon: IconHelp },
+    // { title: "Search", url: "/search", icon: IconSearch },
+  ],
+}
 
-// const documents = [
-//   { name: "Data Library", url: "/data-library", icon: IconDatabase },
-//   { name: "Reports", url: "/reports", icon: IconReport },
-//   { name: "Word Assistant", url: "/word-assistant", icon: IconFileWord },
-// ]
-
-type UIUser = { name: string; email: string; avatar: string }
-
-export function AppSidebar(
-  { user, ...props }:
-  React.ComponentProps<typeof Sidebar> & { user: UIUser }
-) {
-  const pathname = usePathname()
-
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { user: UIUser }) {
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
+            <SidebarMenuButton asChild>
               <Link href="/dashboard" className="flex items-center gap-2">
                 <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">PPP</span>
+                <span className="text-base font-semibold">Acme Inc.</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -64,60 +70,16 @@ export function AppSidebar(
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarMenu >
-          {navItems.map(({ title, url, icon: Icon }) => {
-            const isActive = pathname === url
-            return (
-              <SidebarMenuItem key={url}>
-                <SidebarMenuButton asChild className="relative">
-                  <Link
-                    href={url}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground hover:bg-muted'}`}
-                  >
-                    <Icon className="size-5 shrink-0" />
-                    <span className="truncate">{title}</span>
-                    {isActive && (
-                      <motion.span
-                        layoutId="sidebar-active"
-                        className="absolute inset-0 z-[-1] rounded-md bg-accent"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )
-          })}
-        </SidebarMenu>
+        {/* Hauptnavigation inkl. Quick Create */}
+        <NavMain items={data.navMain} className="mt-2" />
 
-        {/* Dokumente für später */}
-        {/* <NavDocuments items={documents} /> */}
+        {/* Dokumente später aktivieren */}
+        {/*
+        <NavDocuments items={data.documents} />
+        */}
 
-        <SidebarMenu className="mt-auto ">
-          {navSecondary.map(({ title, url, icon: Icon }) => {
-            const isActive = pathname === url
-            return (
-              <SidebarMenuItem key={url}>
-                <SidebarMenuButton asChild className="relative">
-                  <Link
-                    href={url}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-md transition-colors ${isActive ? 'bg-accent text-accent-foreground font-medium' : 'text-muted-foreground hover:bg-muted'}`}
-                  >
-                    <Icon className="size-5 shrink-0" />
-                    <span className="truncate">{title}</span>
-                    {isActive && (
-                      <motion.span
-                        layoutId="sidebar-active"
-                        className="absolute inset-0 z-[-1] rounded-md bg-accent"
-                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      />
-                    )}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )
-          })}
-        </SidebarMenu>
+        {/* Sekundärnavigation */}
+        <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
 
       <SidebarFooter>
