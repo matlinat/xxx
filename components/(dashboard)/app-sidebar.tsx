@@ -68,7 +68,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-4">
         {/* Hauptnavigation inkl. Quick Create */}
         <NavMain items={data.navMain} className="mt-2" />
 
