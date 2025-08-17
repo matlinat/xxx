@@ -47,10 +47,10 @@ export function NavMain({
                   ),
                 // Quick Create CTA
                 item.highlight &&
-                  "w-full px-4 py-3 text-base font-semibold bg-white text-black border shadow-sm hover:shadow-md hover:scale-[1.01]"
+                  "w-full px-3 py-3 font-medium bg-white text-black border shadow-sm hover:shadow-md"
               )}
             >
-              <Link href={item.url} className="flex items-center gap-2 w-full">
+              <Link href={item.url} className="flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors">
                 {Icon ? <Icon className="size-5 shrink-0" /> : null}
                 <span>{item.title}</span>
               </Link>

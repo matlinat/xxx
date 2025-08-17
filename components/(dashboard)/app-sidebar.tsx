@@ -58,19 +58,20 @@ export function AppSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <Link href="/dashboard" className="flex items-center gap-2">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
-              </Link>
-            </SidebarMenuButton>
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2 px-5 py-2 font-semibold text-base select-none"
+            >
+              <IconInnerShadowTop className="size-5" />
+              <span>PPP.io</span>
+            </Link>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="px-4">
+      <SidebarContent className="px-2">
         {/* Hauptnavigation inkl. Quick Create */}
-        <NavMain items={data.navMain} className="mt-2" />
+        <NavMain items={data.navMain} className="mt-6 px-2" />
 
         {/* Dokumente später aktivieren */}
         {/*
