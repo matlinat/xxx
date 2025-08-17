@@ -37,7 +37,7 @@ export function NavMain({
               asChild
               className={cn(
                 "flex items-center gap-2 rounded-md transition-all",
-                // Normal links
+                // Normale Links
                 !item.highlight &&
                   cn(
                     "px-3 py-2 text-sm",
@@ -45,9 +45,9 @@ export function NavMain({
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "hover:bg-sidebar-accent/50"
                   ),
-                // Highlight CTA
+                // Quick Create CTA
                 item.highlight &&
-                  "mt-3 mb-5 w-full px-4 py-3 text-base font-semibold bg-background text-foreground border shadow-sm hover:shadow-lg hover:scale-[1.01]"
+                  "w-full px-4 py-3 text-base font-semibold bg-white text-black border shadow-sm hover:shadow-md hover:scale-[1.01]"
               )}
             >
               <Link href={item.url} className="flex items-center gap-2 w-full">
