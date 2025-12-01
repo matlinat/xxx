@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, SUPA_BUCKET_ORIG } from "@/lib/supabase/admin";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const { filename, userId } = await req.json();

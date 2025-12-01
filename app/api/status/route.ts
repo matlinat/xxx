@@ -2,6 +2,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin, SUPA_BUCKET_PROC } from "@/lib/supabase/admin";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);

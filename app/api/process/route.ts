@@ -8,6 +8,7 @@ import {
   SUPA_BUCKET_PROC,
 } from "@/lib/supabase/admin";
 
+export const dynamic = 'force-dynamic';
 export const runtime = "nodejs";
 
 const replicate = new Replicate({
