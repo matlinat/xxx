@@ -1,8 +1,9 @@
 // components/site-header.tsx
 "use client"
 
+import * as React from "react"
 import Link from "next/link"
-import Image from "next/image"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   NavigationMenu,
@@ -19,13 +20,31 @@ import { cn } from "@/lib/utils"
 import { Menu } from "lucide-react"
 
 const navItems = [
-  { title: "Features", href: "/#features" },
-  { title: "Pricing", href: "/#pricing" },
-  { title: "Showcase", href: "/#showcase" },
-  { title: "FAQ", href: "/#faq" },
+  { title: "Features", href: "#features" },
+  { title: "Vergleich", href: "#comparison" },
+  { title: "FAQ", href: "#faq" },
 ]
 
+function handleNavClick(e: React.MouseEvent<HTMLAnchorElement>, href: string, onClose?: () => void) {
+  // Wenn wir bereits auf der Startseite sind, smooth scroll
+  if (href.startsWith("#")) {
+    e.preventDefault()
+    const element = document.querySelector(href)
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" })
+      // Sheet schließen nach Scroll
+      if (onClose) {
+        setTimeout(() => onClose(), 100)
+      }
+    }
+  }
+}
+
 export function SiteHeader({ className }: { className?: string }) {
+  const pathname = usePathname()
+  const isHomePage = pathname === "/"
+  const [sheetOpen, setSheetOpen] = React.useState(false)
+
   return (
     <header
       className={cn(
@@ -51,11 +70,21 @@ export function SiteHeader({ className }: { className?: string }) {
             <NavigationMenuList>
               {navItems.map((it) => (
                 <NavigationMenuItem key={it.href}>
-                  <Link href={it.href} legacyBehavior passHref>
-                    <NavigationMenuLink className="px-3 py-2 text-sm hover:underline underline-offset-4">
+                  {isHomePage ? (
+                    <a
+                      href={it.href}
+                      onClick={(e) => handleNavClick(e, it.href)}
+                      className="px-3 py-2 text-sm hover:underline underline-offset-4 cursor-pointer"
+                    >
                       {it.title}
-                    </NavigationMenuLink>
-                  </Link>
+                    </a>
+                  ) : (
+                    <Link href={`/${it.href}`} legacyBehavior passHref>
+                      <NavigationMenuLink className="px-3 py-2 text-sm hover:underline underline-offset-4">
+                        {it.title}
+                      </NavigationMenuLink>
+                    </Link>
+                  )}
                 </NavigationMenuItem>
               ))}
             </NavigationMenuList>
@@ -72,7 +101,7 @@ export function SiteHeader({ className }: { className?: string }) {
           </Button>
 
           {/* Mobile-Menü-Trigger (Menüpunkte im Sheet) */}
-          <Sheet>
+          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger
               className="inline-flex items-center justify-center rounded-md p-2 hover:bg-accent sm:hidden"
               aria-label="Open menu"
@@ -81,15 +110,27 @@ export function SiteHeader({ className }: { className?: string }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-72">
               <div className="mt-6 grid gap-2">
-                {navItems.map((it) => (
-                  <Link
-                    key={it.href}
-                    href={it.href}
-                    className="rounded-md px-2 py-2 text-sm hover:bg-accent"
-                  >
-                    {it.title}
-                  </Link>
-                ))}
+                {navItems.map((it) =>
+                  isHomePage ? (
+                    <a
+                      key={it.href}
+                      href={it.href}
+                      onClick={(e) => handleNavClick(e, it.href, () => setSheetOpen(false))}
+                      className="rounded-md px-2 py-2 text-sm hover:bg-accent cursor-pointer"
+                    >
+                      {it.title}
+                    </a>
+                  ) : (
+                    <Link
+                      key={it.href}
+                      href={`/${it.href}`}
+                      onClick={() => setSheetOpen(false)}
+                      className="rounded-md px-2 py-2 text-sm hover:bg-accent"
+                    >
+                      {it.title}
+                    </Link>
+                  )
+                )}
                 <div className="pt-2 space-y-2">
                   <Button asChild className="w-full">
                     <Link href="/signup">Get Started</Link>
