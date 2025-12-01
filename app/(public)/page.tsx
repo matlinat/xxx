@@ -75,7 +75,7 @@ export default function Page() {
       </section>
 
       {/* Features */}
-      <section id="features" className="border-t bg-muted/30 py-12 md:py-16 lg:py-20">
+      <section id="features" className="w-full border-t bg-muted/30 py-12 md:py-16 lg:py-20">
         <div className="mx-auto w-full max-w-6xl px-4">
           <h2 className="text-center text-2xl font-bold sm:text-3xl md:text-4xl">Wieso CreatorSafe anders ist</h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 md:mt-12">
@@ -240,7 +240,7 @@ export default function Page() {
       </section>
 
       {/* Testimonials */}
-      <section className="border-t bg-muted/30 py-12 md:py-16 lg:py-20">
+      <section className="w-full border-t bg-muted/30 py-12 md:py-16 lg:py-20">
         <div className="mx-auto w-full max-w-6xl px-4">
           <h2 className="text-center text-2xl font-bold sm:text-3xl md:text-4xl">Was Creator sagen</h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 md:mt-12">
@@ -381,7 +381,7 @@ export default function Page() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t bg-muted/30 py-12 md:py-16">
+      <footer className="w-full border-t bg-muted/30 py-12 md:py-16">
         <div className="mx-auto w-full max-w-6xl px-4">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
             <div className="lg:col-span-2">
