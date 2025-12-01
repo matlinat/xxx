@@ -35,19 +35,19 @@ function EarningsCalculator() {
   const [revenue, setRevenue] = React.useState(2000)
   const [subscribers, setSubscribers] = React.useState(200)
 
-  const ofEarnings = revenue * 0.8
-  const csEarnings = revenue * 0.88
-  const difference = csEarnings - ofEarnings
-  const yearlyDifference = difference * 12
+  const ofEarnings = React.useMemo(() => revenue * 0.8, [revenue])
+  const csEarnings = React.useMemo(() => revenue * 0.88, [revenue])
+  const difference = React.useMemo(() => csEarnings - ofEarnings, [csEarnings, ofEarnings])
+  const yearlyDifference = React.useMemo(() => difference * 12, [difference])
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = React.useCallback((value: number) => {
     return new Intl.NumberFormat("de-DE", {
       style: "currency",
       currency: "EUR",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value)
-  }
+  }, [])
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4">
@@ -66,19 +66,28 @@ function EarningsCalculator() {
               <Label htmlFor="revenueSlider" className="text-base font-semibold">
                 Monatlicher Umsatz
               </Label>
-              <input
-                type="range"
-                id="revenueSlider"
-                min="100"
-                max="10000"
-                value={revenue}
-                step="100"
-                onChange={(e) => setRevenue(parseInt(e.target.value))}
-                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                style={{
-                  background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${((revenue - 100) / (10000 - 100)) * 100}%, hsl(var(--muted)) ${((revenue - 100) / (10000 - 100)) * 100}%, hsl(var(--muted)) 100%)`,
-                }}
-              />
+              <div className="relative py-2">
+                <div
+                  className="absolute top-1/2 left-0 h-2 rounded-lg -translate-y-1/2 pointer-events-none"
+                  style={{
+                    width: `${((revenue - 100) / (10000 - 100)) * 100}%`,
+                    background: `hsl(var(--primary))`,
+                  }}
+                />
+                <div
+                  className="absolute top-1/2 left-0 w-full h-2 rounded-lg -translate-y-1/2 pointer-events-none bg-muted"
+                />
+                <input
+                  type="range"
+                  id="revenueSlider"
+                  min="100"
+                  max="10000"
+                  value={revenue}
+                  step="100"
+                  onChange={(e) => setRevenue(parseInt(e.target.value))}
+                  className="relative w-full h-2 rounded-lg appearance-none cursor-pointer slider-input bg-transparent"
+                />
+              </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary sm:text-3xl">
                   {formatCurrency(revenue)}
