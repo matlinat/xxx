@@ -50,7 +50,7 @@ export function LoginForm({ className, action }: { className?: string; action: (
               </div>
               <span className="sr-only">xxx</span>
             </div>
-            <h1 className="text-xl font-bold">Welcome Back, Marketer! Login with your existing account.</h1>
+            <h1 className="text-xl font-bold text-center">Welcome Back, Creator! Login with your existing account.</h1>
             <div className="text-center text-sm">
               Don&apos;t have an account?{' '}
               <a href="/signup" className="underline underline-offset-4">
