@@ -5,6 +5,8 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Table,
   TableBody,
@@ -26,7 +28,111 @@ import {
   TrendingUp,
   Mail,
   Phone,
+  Calculator,
 } from "lucide-react"
+
+function EarningsCalculator() {
+  const [revenue, setRevenue] = React.useState(2000)
+  const [subscribers, setSubscribers] = React.useState(200)
+
+  const ofEarnings = revenue * 0.8
+  const csEarnings = revenue * 0.88
+  const difference = csEarnings - ofEarnings
+  const yearlyDifference = difference * 12
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("de-DE", {
+      style: "currency",
+      currency: "EUR",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  return (
+    <div className="mx-auto w-full max-w-4xl px-4">
+      <h2 className="text-center text-2xl font-bold sm:text-3xl md:text-4xl">Wie viel mehr du verdienst</h2>
+      <Card className="mt-8 md:mt-12">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Calculator className="size-5 text-primary" />
+            <CardTitle>Einnahmen-Rechner</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-6 sm:grid-cols-2">
+            {/* Revenue Slider */}
+            <div className="space-y-4">
+              <Label htmlFor="revenueSlider" className="text-base font-semibold">
+                Monatlicher Umsatz
+              </Label>
+              <input
+                type="range"
+                id="revenueSlider"
+                min="100"
+                max="10000"
+                value={revenue}
+                step="100"
+                onChange={(e) => setRevenue(parseInt(e.target.value))}
+                className="w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
+                style={{
+                  background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${((revenue - 100) / (10000 - 100)) * 100}%, hsl(var(--muted)) ${((revenue - 100) / (10000 - 100)) * 100}%, hsl(var(--muted)) 100%)`,
+                }}
+              />
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary sm:text-3xl">
+                  {formatCurrency(revenue)}
+                </div>
+              </div>
+            </div>
+
+            {/* Subscribers Input */}
+            <div className="space-y-4">
+              <Label htmlFor="subscribers" className="text-base font-semibold">
+                Abonnenten
+              </Label>
+              <Input
+                id="subscribers"
+                type="number"
+                value={subscribers}
+                min="10"
+                max="5000"
+                onChange={(e) => setSubscribers(parseInt(e.target.value) || 0)}
+                className="text-center text-lg font-semibold"
+              />
+            </div>
+          </div>
+
+          {/* Results */}
+          <div className="rounded-lg border bg-muted/50 p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">OnlyFans Einnahmen (80%):</span>
+              <strong className="text-lg">{formatCurrency(ofEarnings)}</strong>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">CreatorSafe Einnahmen (88%):</span>
+              <strong className="text-lg text-primary">{formatCurrency(csEarnings)}</strong>
+            </div>
+            <div className="border-t pt-4 space-y-2">
+              <div className="flex items-center justify-between text-base">
+                <span className="font-medium">Mehr pro Monat:</span>
+                <strong className="text-lg text-primary">
+                  +{formatCurrency(difference)}
+                </strong>
+              </div>
+              <div className="flex items-center justify-between text-base">
+                <span className="font-medium">Mehr pro Jahr:</span>
+                <strong className="text-lg text-primary">
+                  +{formatCurrency(yearlyDifference)}
+                </strong>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
 
 export default function Page() {
   return (
@@ -296,6 +402,11 @@ export default function Page() {
             </Card>
           </div>
         </div>
+      </section>
+
+      {/* Earnings Calculator */}
+      <section id="pricing" className="border-t py-12 md:py-16 lg:py-20">
+        <EarningsCalculator />
       </section>
 
       {/* CTA Section */}
