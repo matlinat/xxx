@@ -38,10 +38,10 @@ export function SiteHeader({ className }: { className?: string }) {
         <Link href="/" className="flex items-center gap-2">
           {/* Ersetze das Logo nach Bedarf */}
           <div className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
-            <span className="text-xs font-bold">PPP</span>
+            <span className="text-xs font-bold">xxx</span>
           </div>
           <span className="hidden text-sm font-semibold sm:inline-block">
-            PPP.io
+            xxx.io
           </span>
         </Link>
 

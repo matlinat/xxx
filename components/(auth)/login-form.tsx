@@ -48,7 +48,7 @@ export function LoginForm({ className, action }: { className?: string; action: (
               <div className="flex size-8 items-center justify-center rounded-md">
                 <GalleryVerticalEnd className="size-6" />
               </div>
-              <span className="sr-only">PPP</span>
+              <span className="sr-only">xxx</span>
             </div>
             <h1 className="text-xl font-bold">Welcome Back, Marketer! Login with your existing account.</h1>
             <div className="text-center text-sm">

@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     // 0) Job anlegen (status: processing) – damit das Frontend eine jobId hat
     const { data: job, error: jobErr } = await supabaseAdmin
-      .from("ppp_jobs")
+      .from("xxx_jobs")
       .insert([
         {
           user_id: userId ?? null,
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     // 5) Job updaten
     await supabaseAdmin
-      .from("ppp_jobs")
+      .from("xxx_jobs")
       .update({ status: "done", processed_path: processedPath })
       .eq("id", job.id);
 

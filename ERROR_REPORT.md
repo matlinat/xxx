@@ -76,7 +76,7 @@ body: JSON.stringify({ originalPath: sign.path, bgMode }),  // ❌ userId fehlt
 
 **Aktueller Code:**
 ```typescript
-const { data: job, error } = await supabaseAdmin.from("ppp_jobs")...
+const { data: job, error } = await supabaseAdmin.from("xxx_jobs")...
 if (error || !job) return NextResponse.json({ error: "job not found" }, { status: 404 });
 ```
 

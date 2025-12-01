@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     }
 
     const { data: job, error } = await supabaseAdmin
-      .from("ppp_jobs")
+      .from("xxx_jobs")
       .select("*")
       .eq("id", id)
       .single();

@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
 
     // Job
     const { data: job, error: jobErr } = await supabaseAdmin
-      .from("ppp_jobs")
+      .from("xxx_jobs")
       .insert([{ user_id: userId ?? null, original_path: originalPath, status: "processing" }])
       .select()
       .single();
@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
     // DB-Update (best effort)
     try {
       const { error: updErr } = await supabaseAdmin
-        .from("ppp_jobs")
+        .from("xxx_jobs")
         .update({
           status: "done",
           processed_path: results[0]?.processedPath ?? null,
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
     } catch (e) {
       console.error("[process] meta update failed, fallback:", (e as any)?.message);
       await supabaseAdmin
-        .from("ppp_jobs")
+        .from("xxx_jobs")
         .update({ status: "done", processed_path: results[0]?.processedPath ?? null })
         .eq("id", job.id);
     }

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get("id");
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-    const { data: job, error } = await supabaseAdmin.from("ppp_jobs").select("*").eq("id", id).single();
+    const { data: job, error } = await supabaseAdmin.from("xxx_jobs").select("*").eq("id", id).single();
     if (error || !job) return NextResponse.json({ error: "job not found" }, { status: 404 });
 
     // legacy single
