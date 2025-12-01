@@ -108,7 +108,7 @@ export function SiteHeader({ className }: { className?: string }) {
             >
               <Menu className="size-5" />
             </SheetTrigger>
-            <SheetContent side="left" className="w-72">
+            <SheetContent side="right" className="w-72">
               <div className="mt-6 grid gap-2">
                 {navItems.map((it) =>
                   isHomePage ? (
