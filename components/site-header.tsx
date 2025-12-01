@@ -62,9 +62,12 @@ export function SiteHeader({ className }: { className?: string }) {
           </NavigationMenu>
         </div>
 
-        {/* Login-Button: immer sichtbar */}
+        {/* Action Buttons: immer sichtbar */}
         <div className="ml-auto flex items-center gap-2">
-          <Button asChild size="sm">
+          <Button asChild size="sm" variant="default">
+            <Link href="/signup">Get Started</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
             <Link href="/login">Login</Link>
           </Button>
 
@@ -87,8 +90,11 @@ export function SiteHeader({ className }: { className?: string }) {
                     {it.title}
                   </Link>
                 ))}
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
                   <Button asChild className="w-full">
+                    <Link href="/signup">Get Started</Link>
+                  </Button>
+                  <Button asChild variant="outline" className="w-full">
                     <Link href="/login">Login</Link>
                   </Button>
                 </div>

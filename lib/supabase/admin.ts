@@ -31,5 +31,3 @@ export const supabaseAdmin = new Proxy({} as SupabaseClient, {
   }
 })
 
-export const SUPA_BUCKET_ORIG = process.env.SUPABASE_BUCKET_ORIGINALS!
-export const SUPA_BUCKET_PROC = process.env.SUPABASE_BUCKET_PROCESSED!
