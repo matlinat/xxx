@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ProductTool } from "@/components/product-tool"
-import { IconBolt, IconWand, IconCloud, IconShieldCheck } from "@tabler/icons-react"
+import { Zap, Wand2, Cloud, ShieldCheck } from "lucide-react"
 
 export default function Page() {
   return (
@@ -35,10 +35,10 @@ export default function Page() {
         <h2 className="text-3xl font-bold text-center mb-10">Features</h2>
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { icon: IconWand, title: "Schnell & einfach", text: "Hintergründe in wenigen Sekunden entfernt." },
-            { icon: IconBolt, title: "Hohe Qualität", text: "Kristallklare Ergebnisse mit KI-gestützter Präzision." },
-            { icon: IconCloud, title: "Cloud-basiert", text: "Kein Download, funktioniert direkt im Browser." },
-            { icon: IconShieldCheck, title: "DSGVO-konform", text: "Deine Daten bleiben sicher in der EU." },
+            { icon: Wand2, title: "Schnell & einfach", text: "Hintergründe in wenigen Sekunden entfernt." },
+            { icon: Zap, title: "Hohe Qualität", text: "Kristallklare Ergebnisse mit KI-gestützter Präzision." },
+            { icon: Cloud, title: "Cloud-basiert", text: "Kein Download, funktioniert direkt im Browser." },
+            { icon: ShieldCheck, title: "DSGVO-konform", text: "Deine Daten bleiben sicher in der EU." },
           ].map((f, i) => (
             <Card key={i}>
               <CardHeader>

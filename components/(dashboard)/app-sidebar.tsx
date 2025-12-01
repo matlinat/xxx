@@ -3,15 +3,15 @@
 import * as React from "react"
 import Link from "next/link"
 import {
-  IconChartBar,
-  IconDashboard,
-  IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconPlus,
-  IconSettings,
-} from "@tabler/icons-react"
+  BarChart3,
+  LayoutDashboard,
+  Folder,
+  HelpCircle,
+  Sparkles,
+  List,
+  Plus,
+  Settings,
+} from "lucide-react"
 
 import { NavMain } from "@/components/(dashboard)/nav-main"
 import { NavSecondary } from "@/components/(dashboard)/nav-secondary"
@@ -36,16 +36,16 @@ type UIUser = {
 
 const data = {
   navMain: [
-    { title: "Quick Create", url: "/quick-create", icon: IconPlus, highlight: true },
-    { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
-    { title: "Job History", url: "/job-history", icon: IconListDetails },
-    { title: "Projects", url: "/projects", icon: IconFolder },
+    { title: "Quick Create", url: "/quick-create", icon: Plus, highlight: true },
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Job History", url: "/job-history", icon: List },
+    { title: "Projects", url: "/projects", icon: Folder },
   ],
   // navClouds und documents aktuell nicht benötigt
   navSecondary: [
-    { title: "Settings", url: "/settings", icon: IconSettings },
-    { title: "Get Help", url: "/get-help", icon: IconHelp },
-    // { title: "Search", url: "/search", icon: IconSearch },
+    { title: "Settings", url: "/settings", icon: Settings },
+    { title: "Get Help", url: "/get-help", icon: HelpCircle },
+    // { title: "Search", url: "/search", icon: Search },
   ],
 }
 
@@ -62,7 +62,7 @@ export function AppSidebar({
               href="/dashboard"
               className="flex items-center gap-2 px-5 py-2 font-semibold text-base select-none"
             >
-              <IconInnerShadowTop className="size-5" />
+              <Sparkles className="size-5" />
               <span>PPP.io</span>
             </Link>
           </SidebarMenuItem>

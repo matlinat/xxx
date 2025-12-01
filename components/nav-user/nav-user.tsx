@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import {
-  IconCreditCard,
-  IconDotsVertical,
-  IconLogout,
-  IconNotification,
-  IconUserCircle,
-} from "@tabler/icons-react";
+  CreditCard,
+  MoreVertical,
+  LogOut,
+  Bell,
+  UserCircle,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -71,7 +71,7 @@ export function NavUser({
                   {user.email}
                 </span>
               </div>
-              <IconDotsVertical className="ml-auto size-4" />
+              <MoreVertical className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 
@@ -101,19 +101,19 @@ export function NavUser({
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
                 <Link href="/account" className="flex items-center gap-2">
-                  <IconUserCircle className="size-4" />
+                  <UserCircle className="size-4" />
                   <span>Account</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/billing" className="flex items-center gap-2">
-                  <IconCreditCard className="size-4" />
+                  <CreditCard className="size-4" />
                   <span>Billing</span>
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/notifications" className="flex items-center gap-2">
-                  <IconNotification className="size-4" />
+                  <Bell className="size-4" />
                   <span>Notifications</span>
                 </Link>
               </DropdownMenuItem>
@@ -122,7 +122,7 @@ export function NavUser({
             <DropdownMenuSeparator />
 
             <DropdownMenuItem onSelect={onLogout} disabled={pending}>
-              <IconLogout className="size-4" />
+              <LogOut className="size-4" />
               {pending ? "Logging out…" : "Log out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
