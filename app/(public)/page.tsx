@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
 import {
   Table,
   TableBody,
@@ -32,11 +33,13 @@ import {
 } from "lucide-react"
 
 function EarningsCalculator() {
-  const [revenue, setRevenue] = React.useState(2000)
-  const [subscribers, setSubscribers] = React.useState(200)
+  const [revenue, setRevenue] = React.useState([2000])
 
-  const ofEarnings = React.useMemo(() => revenue * 0.8, [revenue])
-  const csEarnings = React.useMemo(() => revenue * 0.88, [revenue])
+  // Berechne Abonnenten basierend auf Umsatz (durchschnittlich 10€ pro Abonnent)
+  const subscribers = React.useMemo(() => Math.round(revenue[0] / 10), [revenue])
+
+  const ofEarnings = React.useMemo(() => revenue[0] * 0.8, [revenue])
+  const csEarnings = React.useMemo(() => revenue[0] * 0.88, [revenue])
   const difference = React.useMemo(() => csEarnings - ofEarnings, [csEarnings, ofEarnings])
   const yearlyDifference = React.useMemo(() => difference * 12, [difference])
 
@@ -60,55 +63,40 @@ function EarningsCalculator() {
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-6">
             {/* Revenue Slider */}
             <div className="space-y-4">
-              <Label htmlFor="revenueSlider" className="text-base font-semibold">
+              <Label className="text-base font-semibold">
                 Monatlicher Umsatz
               </Label>
-              <div className="relative py-2">
-                <div
-                  className="absolute top-1/2 left-0 h-2 rounded-lg -translate-y-1/2 pointer-events-none"
-                  style={{
-                    width: `${((revenue - 100) / (10000 - 100)) * 100}%`,
-                    background: `hsl(var(--primary))`,
-                  }}
-                />
-                <div
-                  className="absolute top-1/2 left-0 w-full h-2 rounded-lg -translate-y-1/2 pointer-events-none bg-muted"
-                />
-                <input
-                  type="range"
-                  id="revenueSlider"
-                  min="100"
-                  max="10000"
-                  value={revenue}
-                  step="100"
-                  onChange={(e) => setRevenue(parseInt(e.target.value))}
-                  className="relative w-full h-2 rounded-lg appearance-none cursor-pointer slider-input bg-transparent"
-                />
-              </div>
+              <Slider
+                value={revenue}
+                onValueChange={setRevenue}
+                min={100}
+                max={10000}
+                step={100}
+                className="w-full"
+              />
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary sm:text-3xl">
-                  {formatCurrency(revenue)}
+                  {formatCurrency(revenue[0])}
                 </div>
               </div>
             </div>
 
-            {/* Subscribers Input */}
+            {/* Abonnenten Anzeige */}
             <div className="space-y-4">
-              <Label htmlFor="subscribers" className="text-base font-semibold">
+              <Label className="text-base font-semibold">
                 Abonnenten
               </Label>
-              <Input
-                id="subscribers"
-                type="number"
-                value={subscribers}
-                min="10"
-                max="5000"
-                onChange={(e) => setSubscribers(parseInt(e.target.value) || 0)}
-                className="text-center text-lg font-semibold"
-              />
+              <div className="text-center">
+                <div className="text-2xl font-bold text-muted-foreground sm:text-3xl">
+                  {subscribers.toLocaleString("de-DE")}
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  (basierend auf durchschnittlich 10€ pro Abonnent)
+                </p>
+              </div>
             </div>
           </div>
 
