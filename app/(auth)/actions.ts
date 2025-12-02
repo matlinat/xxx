@@ -61,3 +61,67 @@ export async function registerAction(formData: FormData) {
 
   redirect('/confirm')
 }
+
+export async function registerCreatorAction(formData: FormData) {
+  const email = String(formData.get('email') || '')
+  const password = String(formData.get('password') || '')
+  const username = String(formData.get('username') || '')
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  const user = data.user
+  if (!user) return { error: 'Registrierung fehlgeschlagen.' }
+
+  // Eintrag in users-Tabelle mit Creator-Rolle
+  const { error: insertError } = await supabaseAdmin.from('users').insert({
+    auth_user_id: user.id,
+    username,
+    role: 'creator',
+  })
+
+  if (insertError) {
+    return { error: insertError.message }
+  }
+
+  redirect('/confirm')
+}
+
+export async function registerSubscriberAction(formData: FormData) {
+  const email = String(formData.get('email') || '')
+  const password = String(formData.get('password') || '')
+  const username = String(formData.get('username') || '')
+
+  const supabase = await createClient()
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  const user = data.user
+  if (!user) return { error: 'Registrierung fehlgeschlagen.' }
+
+  // Eintrag in users-Tabelle mit Subscriber-Rolle
+  const { error: insertError } = await supabaseAdmin.from('users').insert({
+    auth_user_id: user.id,
+    username,
+    role: 'subscriber',
+  })
+
+  if (insertError) {
+    return { error: insertError.message }
+  }
+
+  redirect('/confirm')
+}
