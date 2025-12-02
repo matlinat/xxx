@@ -22,12 +22,22 @@ export function SignUpForm({
 
   function onSubmit(formData: FormData) {
     setError('')
+    
+    const password = formData.get('password') as string
+    const passwordConfirm = formData.get('passwordConfirm') as string
+    
+    // Überprüfe ob Passwörter übereinstimmen
+    if (password !== passwordConfirm) {
+      setError('Die Passwörter stimmen nicht überein.')
+      return
+    }
+    
     startTransition(async () => {
       const result = await action(formData)
       if (result?.error) {
         setError(result.error)
       } else {
-        router.replace('/')
+        router.replace('/confirm')
       }
     })
   }
@@ -54,7 +64,7 @@ export function SignUpForm({
               </div>
               <span className="sr-only">Acme Inc.</span>
             </a>
-            <h1 className="text-xl font-bold">Welcome to Acme Inc.</h1>
+            <h1 className="text-xl font-bold text-center">Welcome to xxx</h1>
             <div className="text-center text-sm">
               Already have an account?{" "}
               <a href="/login" className="underline underline-offset-4">
@@ -75,16 +85,12 @@ export function SignUpForm({
               <Input id="username" name="username" type="text" placeholder="yourname" required />
             </div>
             <div className="grid gap-3">
-              <div className="flex items-center">
-                <Label htmlFor="password">Password</Label>
-                <a
-                  href="#"
-                  className="ml-auto text-sm underline-offset-2 hover:underline"
-                >
-                  Forgot your password?
-                </a>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <Input id="password" name="password" type="password" required />
+            </div>
+            <div className="grid gap-3">
+              <Label htmlFor="passwordConfirm">Password bestätigen</Label>
+              <Input id="passwordConfirm" name="passwordConfirm" type="password" required />
             </div>
             <Button type="submit" className="w-full" disabled={pending}>
               {pending ? "Signing up…" : "Sign Up Now"}

@@ -59,5 +59,5 @@ export async function registerAction(formData: FormData) {
     return { error: insertError.message }
   }
 
-  redirect('/')
+  redirect('/confirm')
 }

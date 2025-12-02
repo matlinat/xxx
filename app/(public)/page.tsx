@@ -69,6 +69,11 @@ function EarningsCalculator() {
               <Label className="block text-center text-base font-semibold">
                 Abonnenten
               </Label>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary sm:text-3xl">
+                  {subscribers[0].toLocaleString("de-DE")}
+                </div>
+              </div>
               <Slider
                 value={subscribers}
                 onValueChange={setSubscribers}
@@ -77,11 +82,6 @@ function EarningsCalculator() {
                 step={10}
                 className="w-full"
               />
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary sm:text-3xl">
-                  {subscribers[0].toLocaleString("de-DE")}
-                </div>
-              </div>
             </div>
 
             {/* Umsatz Anzeige */}
