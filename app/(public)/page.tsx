@@ -33,13 +33,13 @@ import {
 } from "lucide-react"
 
 function EarningsCalculator() {
-  const [revenue, setRevenue] = React.useState([2000])
+  const [subscribers, setSubscribers] = React.useState([200])
 
-  // Berechne Abonnenten basierend auf Umsatz (durchschnittlich 10€ pro Abonnent)
-  const subscribers = React.useMemo(() => Math.round(revenue[0] / 10), [revenue])
+  // Berechne Umsatz basierend auf Abonnenten (durchschnittlich 10€ pro Abonnent)
+  const revenue = React.useMemo(() => subscribers[0] * 10, [subscribers])
 
-  const ofEarnings = React.useMemo(() => revenue[0] * 0.8, [revenue])
-  const csEarnings = React.useMemo(() => revenue[0] * 0.88, [revenue])
+  const ofEarnings = React.useMemo(() => revenue * 0.8, [revenue])
+  const csEarnings = React.useMemo(() => revenue * 0.88, [revenue])
   const difference = React.useMemo(() => csEarnings - ofEarnings, [csEarnings, ofEarnings])
   const yearlyDifference = React.useMemo(() => difference * 12, [difference])
 
@@ -57,41 +57,41 @@ function EarningsCalculator() {
       <h2 className="text-center text-2xl font-bold sm:text-3xl md:text-4xl">Wie viel mehr du verdienst</h2>
       <Card className="mt-8 md:mt-12">
         <CardHeader>
-          <div className="flex items-center gap-2">
-            <Calculator className="size-5 text-primary" />
-            <CardTitle>Einnahmen-Rechner</CardTitle>
+          <div className="flex items-center justify-center gap-2">
+            <Calculator className="size-6 text-primary sm:size-7" />
+            <CardTitle className="text-xl sm:text-2xl md:text-3xl">Einnahmen-Rechner</CardTitle>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-6">
-            {/* Revenue Slider */}
+            {/* Abonnenten Slider */}
             <div className="space-y-4">
-              <Label className="text-base font-semibold">
-                Monatlicher Umsatz
+              <Label className="block text-center text-base font-semibold">
+                Abonnenten
               </Label>
               <Slider
-                value={revenue}
-                onValueChange={setRevenue}
-                min={100}
-                max={10000}
-                step={100}
+                value={subscribers}
+                onValueChange={setSubscribers}
+                min={10}
+                max={1000}
+                step={10}
                 className="w-full"
               />
               <div className="text-center">
                 <div className="text-2xl font-bold text-primary sm:text-3xl">
-                  {formatCurrency(revenue[0])}
+                  {subscribers[0].toLocaleString("de-DE")}
                 </div>
               </div>
             </div>
 
-            {/* Abonnenten Anzeige */}
+            {/* Umsatz Anzeige */}
             <div className="space-y-4">
-              <Label className="text-base font-semibold">
-                Abonnenten
+              <Label className="block text-center text-base font-semibold">
+                Monatlicher Umsatz
               </Label>
               <div className="text-center">
                 <div className="text-2xl font-bold text-muted-foreground sm:text-3xl">
-                  {subscribers.toLocaleString("de-DE")}
+                  {formatCurrency(revenue)}
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
                   (basierend auf durchschnittlich 10€ pro Abonnent)
