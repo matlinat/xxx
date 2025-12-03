@@ -1,0 +1,13 @@
+{
+  "git": {
+    "deploymentEnabled": {
+      "main": true,
+      "pre-production": true
+    }
+  },
+  "domains": [
+    "saucysilk.com",
+    "preview.saucysilk.com"
+  ]
+}
+
