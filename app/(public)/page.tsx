@@ -107,7 +107,7 @@ function EarningsCalculator() {
               <strong className="text-lg">{formatCurrency(ofEarnings)}</strong>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">CreatorSafe Einnahmen (88%):</span>
+              <span className="text-sm text-muted-foreground">SaucySilk Einnahmen (88%):</span>
               <strong className="text-lg text-primary">{formatCurrency(csEarnings)}</strong>
             </div>
             <div className="border-t pt-4 space-y-2">
@@ -180,7 +180,7 @@ export default function Page() {
       {/* Features */}
       <section id="features" className="w-full border-t bg-muted/30 py-12 md:py-16 lg:py-20">
         <div className="mx-auto w-full max-w-6xl px-4">
-          <h2 className="text-center text-2xl font-bold sm:text-3xl md:text-4xl">Wieso CreatorSafe anders ist</h2>
+          <h2 className="text-center text-2xl font-bold sm:text-3xl md:text-4xl">Wieso SaucySilk anders ist</h2>
           <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 md:mt-12">
             <Card>
               <CardHeader>
@@ -267,7 +267,7 @@ export default function Page() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="min-w-[150px]">Feature</TableHead>
-                    <TableHead className="text-center">CreatorSafe</TableHead>
+                    <TableHead className="text-center">SaucySilk</TableHead>
                     <TableHead className="text-center">OnlyFans</TableHead>
                     <TableHead className="text-center">Fansly</TableHead>
                   </TableRow>
@@ -350,7 +350,7 @@ export default function Page() {
             <Card>
               <CardContent className="pt-6">
                 <p className="mb-4 text-sm text-muted-foreground">
-                  "Nachdem meine Videos monatelang geleakt wurden, hat CreatorSafe mir endlich Ruhe gebracht. Die automatischen DMCA-Takedowns sind ein Game-Changer!"
+                  "Nachdem meine Videos monatelang geleakt wurden, hat SaucySilk mir endlich Ruhe gebracht. Die automatischen DMCA-Takedowns sind ein Game-Changer!"
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
@@ -443,7 +443,7 @@ export default function Page() {
               </AccordionItem>
 
               <AccordionItem value="costs">
-                <AccordionTrigger>Was kostet mich CreatorSafe?</AccordionTrigger>
+                <AccordionTrigger>Was kostet mich SaucySilk?</AccordionTrigger>
                 <AccordionContent>
                   Nichts außer einem fairen Anteil an deinen Einnahmen: 12-15% je nach Volumen. Keine monatlichen Gebühren, keine Setup-Kosten, keine versteckten Gebühren.
                 </AccordionContent>
@@ -459,7 +459,7 @@ export default function Page() {
               <AccordionItem value="parallel">
                 <AccordionTrigger>Kann ich parallel zu OnlyFans nutzen?</AccordionTrigger>
                 <AccordionContent>
-                  Absolut! Viele Creator nutzen CreatorSafe als zusätzliche Einnahmequelle. Unsere Tools machen das Cross-Posting einfach.
+                  Absolut! Viele Creator nutzen SaucySilk als zusätzliche Einnahmequelle. Unsere Tools machen das Cross-Posting einfach.
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
@@ -493,7 +493,7 @@ export default function Page() {
         <div className="mx-auto w-full max-w-6xl px-4">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
             <div className="lg:col-span-2">
-              <div className="mb-4 text-xl font-bold">CreatorSafe</div>
+              <div className="mb-4 text-xl font-bold">SaucySilk</div>
               <p className="text-sm text-muted-foreground">
                 Die sichere Plattform für Creator. Mehr Einnahmen, besserer Schutz.
               </p>
@@ -556,11 +556,11 @@ export default function Page() {
               <ul className="space-y-2 text-sm">
                 <li>
                   <Link
-                    href="mailto:support@creatorsafe.com"
+                    href="mailto:support@saucysilk.com"
                     className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                   >
                     <Mail className="size-4" />
-                    support@creatorsafe.com
+                    support@saucysilk.com
                   </Link>
                 </li>
                 <li>
@@ -573,7 +573,7 @@ export default function Page() {
                   </Link>
                 </li>
                 <li className="mt-4 text-xs text-muted-foreground">
-                  CreatorSafe GmbH
+                  SaucySilk GmbH
                   <br />
                   Musterstraße 123
                   <br />
@@ -584,7 +584,7 @@ export default function Page() {
           </div>
 
           <div className="mt-8 border-t pt-8 text-center text-sm text-muted-foreground">
-            © {new Date().getFullYear()} CreatorSafe GmbH. Alle Rechte vorbehalten.
+            © {new Date().getFullYear()} SaucySilk GmbH. Alle Rechte vorbehalten.
           </div>
         </div>
       </footer>
