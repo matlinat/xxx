@@ -49,10 +49,11 @@ export async function registerAction(formData: FormData) {
   const user = data.user
   if (!user) return { error: 'Registrierung fehlgeschlagen.' }
 
-  // Eintrag in users-Tabelle
+  // Eintrag in users-Tabelle mit Subscriber-Rolle (Default)
   const { error: insertError } = await supabaseAdmin.from('users').insert({
     auth_user_id: user.id,
     username,
+    role: 'subscriber',
   })
 
   if (insertError) {

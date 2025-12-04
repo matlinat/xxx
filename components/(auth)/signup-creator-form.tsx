@@ -62,11 +62,11 @@ export function SignUpCreatorForm({
               <div className="flex size-8 items-center justify-center rounded-md">
                 <GalleryVerticalEnd className="size-6" />
               </div>
-              <span className="sr-only">xxx.io</span>
+              <span className="sr-only">SaucySilk</span>
             </a>
             <h1 className="text-xl font-bold text-center">Creator Account erstellen</h1>
             <p className="text-center text-sm text-muted-foreground">
-              Starte deine Creator-Karriere und verdiene bis zu 88% deiner Einnahmen
+              Starte deine Creator-Karriere und verdiene mit deinen Inhalten
             </p>
             <div className="text-center text-sm">
               Bereits ein Konto?{" "}
@@ -146,4 +146,3 @@ export function SignUpCreatorForm({
     </div>
   )
 }
-

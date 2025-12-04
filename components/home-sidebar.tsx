@@ -9,6 +9,7 @@ import {
   Image,
   MessageCircle,
   Radio,
+  Star,
 } from "lucide-react"
 import { NavMain } from "@/components/(dashboard)/nav-main"
 import { NavUser } from "@/components/nav-user/nav-user"
@@ -20,6 +21,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
 
 type UIUser = {
   name: string
@@ -64,12 +66,25 @@ export function HomeSidebar({
         <NavMain items={navItems} className="mt-6 px-2" />
       </SidebarContent>
 
-      {/* User-Bereich nur wenn eingeloggt */}
-      {user && (
-        <SidebarFooter>
+      {/* Footer: "Creator werden" Button (nur wenn nicht eingeloggt) oder User-Bereich (wenn eingeloggt) */}
+      <SidebarFooter>
+        {user ? (
           <NavUser user={user} />
-        </SidebarFooter>
-      )}
+        ) : (
+          <div className="px-2 pb-2">
+            <Button
+              asChild
+              size="lg"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold text-base md:text-sm h-12 md:h-10 shadow-lg"
+            >
+              <Link href="/signup/creator" className="flex items-center justify-center gap-2">
+                <Star className="size-5 md:size-4 fill-white" />
+                <span>Creator werden</span>
+              </Link>
+            </Button>
+          </div>
+        )}
+      </SidebarFooter>
     </Sidebar>
   )
 }
