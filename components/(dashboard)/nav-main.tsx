@@ -36,21 +36,21 @@ export function NavMain({
             <SidebarMenuButton
               asChild
               className={cn(
-                "flex items-center gap-2 rounded-md transition-all",
+                "flex items-center gap-2 rounded-md transition-all h-12 md:h-10",
                 // Normale Links
                 !item.highlight &&
                   cn(
-                    "px-3 py-2 text-base md:text-sm",
+                    "px-3 text-base md:text-sm",
                     isActive
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "hover:bg-sidebar-accent/50"
                   ),
                 // Quick Create CTA
                 item.highlight &&
-                  "w-full px-3 py-3 font-medium bg-white text-black border shadow-sm hover:shadow-md"
+                  "w-full px-3 font-medium bg-white text-black border shadow-sm hover:shadow-md"
               )}
             >
-              <Link href={item.url} className="flex items-center gap-2 rounded-md px-3 py-2 text-base md:text-sm transition-colors">
+              <Link href={item.url} className="flex items-center gap-2 w-full h-full">
                 {Icon ? <Icon className="size-6 md:size-5 shrink-0" /> : null}
                 <span>{item.title}</span>
               </Link>

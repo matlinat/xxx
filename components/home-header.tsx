@@ -57,29 +57,52 @@ export function HomeHeader({ user }: { user?: UIUser }) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4">
-        {/* Mobile: Hamburger Menu (links) */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden size-9 flex-shrink-0"
-          onClick={toggleSidebar}
-          aria-label="Menü öffnen"
-        >
-          <Menu className="size-6" />
-        </Button>
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-1 px-3 sm:px-4">
+        {/* Mobile: Hamburger Menu + Search (links) */}
+        <div className="md:hidden flex items-center gap-1 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            onClick={toggleSidebar}
+            aria-label="Menü öffnen"
+          >
+            <Menu className="size-6" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            onClick={() => setSearchOpen(!searchOpen)}
+            aria-label="Suchen"
+          >
+            {searchOpen ? <X className="size-6" /> : <Search className="size-6" />}
+          </Button>
+        </div>
 
-        {/* Mobile: Logo (mitte) */}
+        {/* Mobile: Logo (mittig) */}
         <Link 
           href="/home" 
-          className="flex items-center gap-2 flex-shrink-0 md:flex-shrink-0 absolute left-1/2 -translate-x-1/2 md:relative md:left-0 md:translate-x-0"
+          className="flex items-center gap-2 flex-shrink-0 md:hidden absolute left-1/2 -translate-x-1/2"
         >
           <img
             src="/icon.png"
             alt="SaucySilk"
-            className="size-9 md:size-8 rounded-md"
+            className="size-9 rounded-md"
           />
-          <span className="hidden text-base md:text-sm font-semibold sm:inline-block">
+        </Link>
+
+        {/* Desktop: Logo (links) */}
+        <Link 
+          href="/home" 
+          className="hidden md:flex items-center gap-2 flex-shrink-0"
+        >
+          <img
+            src="/icon.png"
+            alt="SaucySilk"
+            className="size-8 rounded-md"
+          />
+          <span className="text-sm font-semibold">
             SaucySilk
           </span>
         </Link>
@@ -106,18 +129,8 @@ export function HomeHeader({ user }: { user?: UIUser }) {
           </div>
         </form>
 
-        {/* Mobile: Search Button und Auth Buttons (rechts) */}
-        <div className="md:hidden flex items-center gap-2 ml-auto">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSearchOpen(!searchOpen)}
-            aria-label="Suchen"
-          >
-            {searchOpen ? <X className="size-6" /> : <Search className="size-6" />}
-          </Button>
-
-          {/* Mobile: Auth Buttons - immer sichtbar, rechtsbündig */}
+        {/* Mobile: Auth Buttons (rechtsbündig) */}
+        <div className="md:hidden flex items-center gap-1 ml-auto">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
