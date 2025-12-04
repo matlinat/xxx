@@ -1,4 +1,4 @@
-// app/(home)/layout.tsx
+// app/home/layout.tsx
 import { ReactNode } from "react"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"

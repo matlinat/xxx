@@ -1,4 +1,4 @@
-// app/(home)/page.tsx
+// app/home/page.tsx
 export default function HomePage() {
   return (
     <>
