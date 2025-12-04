@@ -57,9 +57,6 @@ export function HomeHeader({ user }: { user?: UIUser }) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4">
-        {/* Desktop: Sidebar Trigger */}
-        <SidebarTrigger className="hidden md:flex" />
-
         {/* Mobile: Hamburger Menu (wird durch Sidebar ersetzt) */}
         <SidebarTrigger className="md:hidden" />
 
@@ -81,28 +78,6 @@ export function HomeHeader({ user }: { user?: UIUser }) {
             SaucySilk
           </span>
         </Link>
-
-        {/* Desktop: Search Bar */}
-        <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4">
-          <div className="relative flex-1">
-            <Input
-              type="search"
-              placeholder="Suchen..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pr-10"
-            />
-            <Button
-              type="submit"
-              size="sm"
-              variant="ghost"
-              className="absolute right-0 top-0 h-full px-3"
-              aria-label="Suchen"
-            >
-              <Search className="size-4" />
-            </Button>
-          </div>
-        </form>
 
         {/* Desktop: Search Bar */}
         <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4">
