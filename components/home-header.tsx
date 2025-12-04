@@ -58,7 +58,7 @@ export function HomeHeader({ user }: { user?: UIUser }) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-1 px-3 sm:px-4">
-        {/* Mobile: Hamburger + Logo (links) */}
+        {/* Mobile: Hamburger (links) */}
         <div className="md:hidden flex items-center gap-1 flex-shrink-0">
           <Button
             variant="ghost"
@@ -69,30 +69,8 @@ export function HomeHeader({ user }: { user?: UIUser }) {
           >
             <Menu className="size-6" />
           </Button>
-          <Link href="/home" className="flex items-center gap-1.5">
-            <img
-              src="/icon.png"
-              alt="SaucySilk"
-              className="size-8 rounded-md"
-            />
-            <span className="text-sm font-semibold">SaucySilk</span>
-          </Link>
         </div>
 
-        {/* Desktop: Logo (links) */}
-        <Link 
-          href="/home" 
-          className="hidden md:flex items-center gap-2 flex-shrink-0"
-        >
-          <img
-            src="/icon.png"
-            alt="SaucySilk"
-            className="size-8 rounded-md"
-          />
-          <span className="text-sm font-semibold">
-            SaucySilk
-          </span>
-        </Link>
 
         {/* Desktop: Search Bar */}
         <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4">

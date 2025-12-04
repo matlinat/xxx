@@ -180,4 +180,14 @@
     input[type="range"].slider-input:focus::-moz-range-thumb {
         box-shadow: 0 0 0 3px hsl(var(--ring) / 0.5);
     }
+    
+    /* Hide scrollbar */
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
 }

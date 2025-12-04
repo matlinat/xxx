@@ -5,7 +5,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Compass,
-  Video,
   Image,
   MessageCircle,
   Radio,
@@ -38,7 +37,6 @@ type UIUser = {
 const navItems = [
   { title: "Erkunden", url: "/home", icon: Compass },
   { title: "Live Cams", url: "/home/live", icon: Radio },
-  { title: "Videos", url: "/home/videos", icon: Video },
   { title: "Bilder", url: "/home/images", icon: Image },
   { title: "Jetzt Chatten", url: "/home/chat", icon: MessageCircle },
 ]
@@ -65,14 +63,14 @@ export function HomeSidebar({
           <SidebarMenuItem>
             <Link
               href="/home"
-              className="flex items-center gap-2 px-5 py-2 font-semibold text-lg md:text-base select-none"
+              className="flex items-center gap-4 px-5 py-4 font-semibold text-2xl md:text-xl select-none"
             >
               <img
                 src="/icon.png"
                 alt="SaucySilk"
-                className="size-7 md:size-6 rounded-md"
+                className="size-14 md:size-12 rounded-md"
               />
-              <span className="hidden sm:inline-block">SaucySilk</span>
+              <span className="inline-block">SaucySilk</span>
             </Link>
           </SidebarMenuItem>
         </SidebarMenu>
