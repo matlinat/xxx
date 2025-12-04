@@ -14,10 +14,20 @@ export async function createClient() {
           return cookieStore.get(name)?.value
         },
         set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
+          try {
+            cookieStore.set({ name, value, ...options })
+          } catch {
+            // Cookie kann in Server Components nicht gesetzt werden
+            // Das ist normal bei getUser() in Layouts - ignorieren
+          }
         },
         remove(name: string, options: any) {
-          cookieStore.set({ name, value: '', ...options })
+          try {
+            cookieStore.set({ name, value: '', ...options })
+          } catch {
+            // Cookie kann in Server Components nicht entfernt werden
+            // Das ist normal bei getUser() in Layouts - ignorieren
+          }
         },
       },
     }
