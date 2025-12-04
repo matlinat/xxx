@@ -58,17 +58,20 @@ export function LiveCamsFilters({ onFilterChange }: LiveCamsFiltersProps) {
         ? groupFilters.filter((f) => f !== value)
         : [...groupFilters, value]
       
-      const newFilters = {
-        ...prev,
-        [group]: newGroupFilters.length > 0 ? newGroupFilters : undefined,
-      }
+      // Build new filters object without undefined values
+      const newFilters: Record<string, string[]> = {}
       
-      // Remove empty groups
-      Object.keys(newFilters).forEach((key) => {
-        if (!newFilters[key] || newFilters[key]!.length === 0) {
-          delete newFilters[key]
+      // Copy all existing filters except the current group
+      Object.keys(prev).forEach((key) => {
+        if (key !== group && prev[key]) {
+          newFilters[key] = prev[key]
         }
       })
+      
+      // Add the current group only if it has filters
+      if (newGroupFilters.length > 0) {
+        newFilters[group] = newGroupFilters
+      }
 
       onFilterChange(newFilters)
       return newFilters
