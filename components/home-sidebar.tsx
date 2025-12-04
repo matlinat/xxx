@@ -10,6 +10,11 @@ import {
   MessageCircle,
   Radio,
   Star,
+  LayoutDashboard,
+  DollarSign,
+  Megaphone,
+  FolderOpen,
+  BarChart3,
 } from "lucide-react"
 import { NavMain } from "@/components/(dashboard)/nav-main"
 import { NavUser } from "@/components/nav-user/nav-user"
@@ -20,6 +25,7 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 
@@ -37,10 +43,21 @@ const navItems = [
   { title: "Jetzt Chatten", url: "/chat", icon: MessageCircle },
 ]
 
+const creatorNavItems = [
+  { title: "Dashboard", url: "/creator", icon: LayoutDashboard },
+  { title: "Earnings", url: "/creator/earnings", icon: DollarSign },
+  { title: "Marketing", url: "/creator/marketing", icon: Megaphone },
+  { title: "Media Library", url: "/creator/media", icon: FolderOpen },
+  { title: "Statistics", url: "/creator/statistics", icon: BarChart3 },
+]
+
 export function HomeSidebar({
   user,
+  role,
   ...props
-}: React.ComponentProps<typeof Sidebar> & { user?: UIUser }) {
+}: React.ComponentProps<typeof Sidebar> & { user?: UIUser; role?: string }) {
+  const isCreator = role === "creator"
+
   return (
     <Sidebar {...props}>
       <SidebarHeader>
@@ -64,6 +81,14 @@ export function HomeSidebar({
       <SidebarContent className="px-2">
         {/* Hauptnavigation */}
         <NavMain items={navItems} className="mt-6 px-2" />
+
+        {/* Creator Navigation - nur für Creator sichtbar */}
+        {isCreator && (
+          <>
+            <SidebarSeparator className="my-4" />
+            <NavMain items={creatorNavItems} className="px-2" />
+          </>
+        )}
       </SidebarContent>
 
       {/* Footer: "Creator werden" Button (nur wenn nicht eingeloggt) oder User-Bereich (wenn eingeloggt) */}
