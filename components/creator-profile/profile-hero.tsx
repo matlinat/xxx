@@ -66,8 +66,8 @@ export function ProfileHero({
 
   return (
     <div className="relative">
-      {/* Cover Image */}
-      <div className="relative h-32 sm:h-48 md:h-56 lg:h-64 w-full overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600">
+      {/* Cover Image - 1.5x höher */}
+      <div className="relative h-48 sm:h-72 md:h-80 lg:h-96 w-full overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600">
         <img
           src={coverUrl}
           alt={`${nickname} Cover`}
@@ -79,18 +79,18 @@ export function ProfileHero({
 
       {/* Profile Info Container */}
       <div className="relative mx-auto max-w-7xl px-4">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12 sm:-mt-16">
-          {/* Avatar */}
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-24 sm:-mt-32">
+          {/* Avatar - 2x größer Mobile, 1.5x größer Desktop */}
           <div className="relative">
-            <Avatar className="size-24 sm:size-32 border-4 border-background shadow-xl">
+            <Avatar className="size-48 sm:size-64 border-4 border-background shadow-xl">
               <AvatarImage src={avatarUrl} alt={nickname} />
-              <AvatarFallback className="text-2xl sm:text-3xl bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+              <AvatarFallback className="text-4xl sm:text-5xl bg-gradient-to-br from-purple-500 to-pink-500 text-white">
                 {initials}
               </AvatarFallback>
             </Avatar>
             {/* Online Indicator */}
             {isOnline && (
-              <span className="absolute bottom-1 right-1 size-5 sm:size-6 rounded-full bg-green-500 border-2 border-background" />
+              <span className="absolute bottom-2 right-2 size-6 sm:size-8 rounded-full bg-green-500 border-4 border-background" />
             )}
           </div>
 

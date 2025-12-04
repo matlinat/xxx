@@ -3,6 +3,7 @@ import { ProfileHero } from "@/components/creator-profile/profile-hero"
 import { ProfileDetails } from "@/components/creator-profile/profile-details"
 import { ProfileAbout } from "@/components/creator-profile/profile-about"
 import { ProfileContentTabs } from "@/components/creator-profile/profile-content-tabs"
+import { ProfileChatButton } from "@/components/creator-profile/profile-chat-button"
 
 // Mock-Daten für die Entwicklung
 const mockCreator = {
@@ -102,6 +103,9 @@ export default async function CreatorProfilePage({
           </aside>
         </div>
       </div>
+
+      {/* Floating Chat Button */}
+      <ProfileChatButton isOnline={creator.isOnline} username={creator.username} />
     </div>
   )
 }

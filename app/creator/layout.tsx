@@ -1,10 +1,14 @@
 // app/creator/layout.tsx
-// Layout für öffentliche Creator-Profile (ohne Sidebar)
+// Layout für öffentliche Creator-Profile (mit Sidebar)
 import { ReactNode } from "react"
 import { createClient } from "@/lib/supabase/server"
 import { HomeHeader } from "@/components/home-header"
 import { HomeFooter } from "@/components/home-footer"
-import { SidebarProvider } from "@/components/ui/sidebar"
+import { HomeSidebar } from "@/components/home-sidebar"
+import {
+  SidebarProvider,
+  SidebarInset,
+} from "@/components/ui/sidebar"
 
 export default async function CreatorPublicLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
@@ -12,10 +16,11 @@ export default async function CreatorPublicLayout({ children }: { children: Reac
   
   // User-Daten laden wenn eingeloggt
   let uiUser = undefined
+  let userRole: string | undefined = undefined
   if (user) {
     const { data: profile } = await supabase
       .from("users")
-      .select("username, avatar_url")
+      .select("username, avatar_url, role")
       .eq("auth_user_id", user.id)
       .maybeSingle()
 
@@ -24,17 +29,19 @@ export default async function CreatorPublicLayout({ children }: { children: Reac
       email: user.email ?? "",
       avatar: profile?.avatar_url || user.user_metadata?.avatar_url || "",
     }
+    userRole = profile?.role
   }
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <div className="flex min-h-screen flex-col w-full">
+    <SidebarProvider>
+      <HomeSidebar user={uiUser} role={userRole} />
+      <SidebarInset className="flex min-h-screen flex-col">
         <HomeHeader user={uiUser} />
         <main className="flex-1">
           {children}
         </main>
         <HomeFooter />
-      </div>
+      </SidebarInset>
     </SidebarProvider>
   )
 }
