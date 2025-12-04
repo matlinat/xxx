@@ -42,7 +42,7 @@ export function NavMain({
                   cn(
                     "px-3 text-base md:text-sm",
                     isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground border-2 border-pink-500"
                       : "hover:bg-sidebar-accent/50"
                   ),
                 // Quick Create CTA

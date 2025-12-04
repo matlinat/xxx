@@ -66,8 +66,8 @@ export function ProfileHero({
 
   return (
     <div className="relative">
-      {/* Cover Image - 1.5x höher */}
-      <div className="relative h-48 sm:h-72 md:h-80 lg:h-96 w-full overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600">
+      {/* Cover Image - größer auf Mobile, ursprünglich auf Desktop */}
+      <div className="relative h-48 sm:h-72 md:h-56 lg:h-64 w-full overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600">
         <img
           src={coverUrl}
           alt={`${nickname} Cover`}
@@ -79,25 +79,25 @@ export function ProfileHero({
 
       {/* Profile Info Container */}
       <div className="relative mx-auto max-w-7xl px-4">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4 -mt-24 sm:-mt-32">
+        <div className="flex flex-col md:flex-row md:items-end gap-4 -mt-24 md:-mt-16 items-center md:items-end">
           {/* Avatar - 2x größer Mobile, 1.5x größer Desktop */}
           <div className="relative">
-            <Avatar className="size-48 sm:size-64 border-4 border-background shadow-xl">
+            <Avatar className="size-48 md:size-64 border-4 border-background shadow-xl">
               <AvatarImage src={avatarUrl} alt={nickname} />
-              <AvatarFallback className="text-4xl sm:text-5xl bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+              <AvatarFallback className="text-4xl md:text-5xl bg-gradient-to-br from-purple-500 to-pink-500 text-white">
                 {initials}
               </AvatarFallback>
             </Avatar>
             {/* Online Indicator */}
             {isOnline && (
-              <span className="absolute bottom-2 right-2 size-6 sm:size-8 rounded-full bg-green-500 border-4 border-background" />
+              <span className="absolute bottom-2 right-2 size-6 md:size-8 rounded-full bg-green-500 border-4 border-background" />
             )}
           </div>
 
-          {/* Name & Status */}
-          <div className="flex-1 pb-2 sm:pb-4">
-            <h1 className="text-2xl sm:text-3xl font-bold">{nickname}</h1>
-            <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
+          {/* Name & Status - zentriert auf Mobile, linksbündig auf Desktop */}
+          <div className="flex-1 pb-2 md:pb-4 text-center md:text-left">
+            <h1 className="text-2xl md:text-3xl font-bold">{nickname}</h1>
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mt-1 text-sm text-muted-foreground">
               {/* Online Status */}
               <span
                 className={cn(
