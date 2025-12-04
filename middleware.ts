@@ -1,33 +1,54 @@
-import { type NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+// middleware.ts
+import { NextResponse, type NextRequest } from 'next/server'
+import { createMiddlewareClient } from '@/lib/supabase/middleware'
 
-export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
+// Routen die eine bestimmte Rolle erfordern
+const protectedRoutes: Record<string, string[]> = {
+  '/home/creator': ['creator'],
+  '/home/admin': ['admin'],
+}
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (key: string) => req.cookies.get(key)?.value,
-        set: (key: string, value: string, options: any) => {
-          res.cookies.set({ name: key, value, ...options })
-        },
-        remove: (key: string, options: any) => {
-          res.cookies.set({ name: key, value: '', ...options })
-        },
-      },
+export async function middleware(request: NextRequest) {
+  const { supabase, response } = await createMiddlewareClient(request)
+  const pathname = request.nextUrl.pathname
+
+  // Session abrufen
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Prüfen ob die Route geschützt ist
+  for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
+    if (pathname.startsWith(route)) {
+      // Nicht eingeloggt -> zur Home-Seite
+      if (!user) {
+        return NextResponse.redirect(new URL('/home', request.url))
+      }
+
+      // Rolle aus der users-Tabelle laden
+      const { data: profile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('auth_user_id', user.id)
+        .single()
+
+      const userRole = profile?.role
+
+      // Rolle nicht erlaubt -> zur Home-Seite
+      if (!userRole || !allowedRoles.includes(userRole)) {
+        return NextResponse.redirect(new URL('/home', request.url))
+      }
+
+      // Zugriff erlaubt
+      break
     }
-  )
+  }
 
-  // This will refresh the session if it's expired
-  await supabase.auth.getSession()
-  return res
+  return response
 }
 
 export const config = {
   matcher: [
-    // Refresh session on these routes. You can narrow this down to only private paths later.
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    // Geschützte Bereiche
+    '/home/creator/:path*',
+    '/home/admin/:path*',
   ],
 }

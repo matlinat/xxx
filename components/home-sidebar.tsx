@@ -44,11 +44,11 @@ const navItems = [
 ]
 
 const creatorNavItems = [
-  { title: "Dashboard", url: "/creator", icon: LayoutDashboard },
-  { title: "Earnings", url: "/creator/earnings", icon: DollarSign },
-  { title: "Marketing", url: "/creator/marketing", icon: Megaphone },
-  { title: "Media Library", url: "/creator/media", icon: FolderOpen },
-  { title: "Statistics", url: "/creator/statistics", icon: BarChart3 },
+  { title: "Dashboard", url: "/home/creator", icon: LayoutDashboard },
+  { title: "Earnings", url: "/home/creator/earnings", icon: DollarSign },
+  { title: "Marketing", url: "/home/creator/marketing", icon: Megaphone },
+  { title: "Media Library", url: "/home/creator/media", icon: FolderOpen },
+  { title: "Statistics", url: "/home/creator/statistics", icon: BarChart3 },
 ]
 
 export function HomeSidebar({
