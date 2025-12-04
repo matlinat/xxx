@@ -19,7 +19,6 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarTrigger,
 } from "@/components/ui/sidebar"
 
 type UIUser = {
@@ -41,25 +40,21 @@ export function HomeSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user?: UIUser }) {
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <div className="flex items-center justify-between w-full px-5 py-2">
-              <Link
-                href="/home"
-                className="flex items-center gap-2 font-semibold text-base select-none"
-              >
-                <img
-                  src="https://placehold.it/24x24"
-                  alt="SaucySilk"
-                  className="size-6 rounded-md"
-                />
-                <span className="hidden sm:inline-block">SaucySilk</span>
-              </Link>
-              {/* Desktop: Sidebar Toggle Button */}
-              <SidebarTrigger className="hidden md:flex ml-auto" />
-            </div>
+            <Link
+              href="/home"
+              className="flex items-center gap-2 px-5 py-2 font-semibold text-base select-none"
+            >
+              <img
+                src="https://placehold.it/24x24"
+                alt="SaucySilk"
+                className="size-6 rounded-md"
+              />
+              <span className="hidden sm:inline-block">SaucySilk</span>
+            </Link>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
