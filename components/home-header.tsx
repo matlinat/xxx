@@ -58,23 +58,19 @@ export function HomeHeader({ user }: { user?: UIUser }) {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:px-4">
         {/* Mobile: Hamburger Menu (wird durch Sidebar ersetzt) */}
-        <SidebarTrigger className="md:hidden" />
+        <SidebarTrigger className="md:hidden [&>svg]:size-6" />
 
-        {/* Logo - Mobile zentriert */}
+        {/* Logo */}
         <Link 
           href="/home" 
-          className={cn(
-            "flex items-center gap-2 flex-shrink-0",
-            "md:ml-0",
-            "mx-auto md:mx-0" // Zentriert auf Mobile
-          )}
+          className="flex items-center gap-2 flex-shrink-0"
         >
           <img
-            src="https://placehold.it/32x32"
+            src="/icon.png"
             alt="SaucySilk"
-            className="size-8 rounded-md"
+            className="size-9 md:size-8 rounded-md"
           />
-          <span className="hidden text-sm font-semibold sm:inline-block">
+          <span className="hidden text-base md:text-sm font-semibold sm:inline-block">
             SaucySilk
           </span>
         </Link>
@@ -101,8 +97,19 @@ export function HomeHeader({ user }: { user?: UIUser }) {
           </div>
         </form>
 
+        {/* Mobile: Search Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="md:hidden ml-auto"
+          onClick={() => setSearchOpen(!searchOpen)}
+          aria-label="Suchen"
+        >
+          {searchOpen ? <X className="size-6" /> : <Search className="size-6" />}
+        </Button>
+
         {/* Desktop: Auth Buttons oder User Menu */}
-        <div className="hidden md:flex items-center gap-2 ml-auto lg:ml-4">
+        <div className="hidden md:flex items-center gap-2 ml-auto">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -147,52 +154,41 @@ export function HomeHeader({ user }: { user?: UIUser }) {
           )}
         </div>
 
-        {/* Mobile: Search Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="md:hidden"
-          onClick={() => setSearchOpen(!searchOpen)}
-          aria-label="Suchen"
-        >
-          {searchOpen ? <X className="size-5" /> : <Search className="size-5" />}
-        </Button>
-
-        {/* Mobile: Auth Buttons - immer sichtbar */}
-        <div className="md:hidden flex items-center gap-2">
+        {/* Mobile: Auth Buttons - immer sichtbar, rechtsbündig */}
+        <div className="md:hidden flex items-center gap-2 ml-auto">
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <User className="size-5" />
+                <Button variant="ghost" size="sm" className="text-base">
+                  <User className="size-6" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="text-base md:text-sm font-medium">{user.name}</p>
+                    <p className="text-sm md:text-xs text-muted-foreground">{user.email}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild className="text-base md:text-sm">
                   <Link href="/account">Account</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild className="text-base md:text-sm">
                   <Link href="/settings">Einstellungen</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={onLogout} disabled={pending}>
+                <DropdownMenuItem onSelect={onLogout} disabled={pending} className="text-base md:text-sm">
                   {pending ? "Wird abgemeldet..." : "Abmelden"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <>
-              <Button asChild size="sm" variant="outline">
+              <Button asChild size="sm" variant="outline" className="text-base">
                 <Link href="/login">Anmelden</Link>
               </Button>
-              <Button asChild size="sm">
+              <Button asChild size="sm" className="text-base">
                 <Link href="/signup">Registrieren</Link>
               </Button>
             </>

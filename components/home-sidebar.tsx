@@ -46,12 +46,12 @@ export function HomeSidebar({
           <SidebarMenuItem>
             <Link
               href="/home"
-              className="flex items-center gap-2 px-5 py-2 font-semibold text-base select-none"
+              className="flex items-center gap-2 px-5 py-2 font-semibold text-lg md:text-base select-none"
             >
               <img
-                src="https://placehold.it/24x24"
+                src="/icon.png"
                 alt="SaucySilk"
-                className="size-6 rounded-md"
+                className="size-7 md:size-6 rounded-md"
               />
               <span className="hidden sm:inline-block">SaucySilk</span>
             </Link>
