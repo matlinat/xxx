@@ -15,7 +15,7 @@ export async function createClient() {
         },
         set(name: string, value: string, options: any) {
           try {
-            cookieStore.set({ name, value, ...options })
+          cookieStore.set({ name, value, ...options })
           } catch {
             // Cookie kann in Server Components nicht gesetzt werden
             // Das ist normal bei getUser() in Layouts - ignorieren
@@ -23,7 +23,7 @@ export async function createClient() {
         },
         remove(name: string, options: any) {
           try {
-            cookieStore.set({ name, value: '', ...options })
+          cookieStore.set({ name, value: '', ...options })
           } catch {
             // Cookie kann in Server Components nicht entfernt werden
             // Das ist normal bei getUser() in Layouts - ignorieren

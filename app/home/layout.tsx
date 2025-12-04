@@ -36,10 +36,10 @@ export default async function HomeLayout({ children }: { children: ReactNode }) 
       <HomeSidebar user={uiUser} role={userRole} />
       <SidebarInset className="flex min-h-screen flex-col">
         <HomeHeader user={uiUser} />
-        <main className="flex-1">
-          {children}
-        </main>
-        <HomeFooter />
+      <main className="flex-1">
+        {children}
+      </main>
+      <HomeFooter />
       </SidebarInset>
     </SidebarProvider>
   )
