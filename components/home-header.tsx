@@ -58,7 +58,7 @@ export function HomeHeader({ user }: { user?: UIUser }) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-1 px-3 sm:px-4">
-        {/* Mobile: Hamburger Menu + Search (links) */}
+        {/* Mobile: Hamburger + Logo (links) */}
         <div className="md:hidden flex items-center gap-1 flex-shrink-0">
           <Button
             variant="ghost"
@@ -69,28 +69,15 @@ export function HomeHeader({ user }: { user?: UIUser }) {
           >
             <Menu className="size-6" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-9"
-            onClick={() => setSearchOpen(!searchOpen)}
-            aria-label="Suchen"
-          >
-            {searchOpen ? <X className="size-6" /> : <Search className="size-6" />}
-          </Button>
+          <Link href="/home" className="flex items-center gap-1.5">
+            <img
+              src="/icon.png"
+              alt="SaucySilk"
+              className="size-8 rounded-md"
+            />
+            <span className="text-sm font-semibold">SaucySilk</span>
+          </Link>
         </div>
-
-        {/* Mobile: Logo (mittig) */}
-        <Link 
-          href="/home" 
-          className="flex items-center gap-2 flex-shrink-0 md:hidden absolute left-1/2 -translate-x-1/2"
-        >
-          <img
-            src="/icon.png"
-            alt="SaucySilk"
-            className="size-9 rounded-md"
-          />
-        </Link>
 
         {/* Desktop: Logo (links) */}
         <Link 
@@ -129,8 +116,17 @@ export function HomeHeader({ user }: { user?: UIUser }) {
           </div>
         </form>
 
-        {/* Mobile: Auth Buttons (rechtsbündig) */}
+        {/* Mobile: Search + Auth Buttons (rechtsbündig) */}
         <div className="md:hidden flex items-center gap-1 ml-auto">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-9"
+            onClick={() => setSearchOpen(!searchOpen)}
+            aria-label="Suchen"
+          >
+            {searchOpen ? <X className="size-6" /> : <Search className="size-6" />}
+          </Button>
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
