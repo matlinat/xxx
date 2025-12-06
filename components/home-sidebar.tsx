@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Compass,
+  Video,
   Image,
   MessageCircle,
   Radio,
@@ -37,6 +38,7 @@ type UIUser = {
 const navItems = [
   { title: "Erkunden", url: "/home", icon: Compass },
   { title: "Live Cams", url: "/home/live", icon: Radio },
+  { title: "Videos", url: "/home/videos", icon: Video },
   { title: "Bilder", url: "/home/images", icon: Image },
   { title: "Jetzt Chatten", url: "/home/chat", icon: MessageCircle },
 ]
