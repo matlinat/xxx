@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { HomeHeader } from "@/components/home-header"
 import { HomeFooter } from "@/components/home-footer"
 import { HomeSidebar } from "@/components/home-sidebar"
+import { BottomNav } from "@/components/bottom-nav"
 import {
   SidebarProvider,
   SidebarInset,
@@ -31,15 +32,26 @@ export default async function HomeLayout({ children }: { children: ReactNode }) 
     userRole = profile?.role
   }
 
+  const isCreator = userRole === "creator"
+
   return (
     <SidebarProvider>
-      <HomeSidebar user={uiUser} role={userRole} />
+      {/* Sidebar: Auf Desktop immer, auf Mobile nur für Creator */}
+      {isCreator ? (
+        <HomeSidebar user={uiUser} role={userRole} />
+      ) : (
+        <div className="hidden md:block">
+          <HomeSidebar user={uiUser} role={userRole} />
+        </div>
+      )}
       <SidebarInset className="flex min-h-screen flex-col">
         <HomeHeader user={uiUser} />
-      <main className="flex-1">
-        {children}
-      </main>
-      <HomeFooter />
+        <main className="flex-1 pb-16 md:pb-0">
+          {children}
+        </main>
+        <HomeFooter />
+        {/* Bottom Navigation: Nur auf Mobile, nicht für Creator */}
+        {!isCreator && <BottomNav />}
       </SidebarInset>
     </SidebarProvider>
   )
