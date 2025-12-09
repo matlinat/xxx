@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, CSSProperties } from "react"
 import Plyr from "plyr"
 import "plyr/dist/plyr.css"
 
@@ -175,18 +175,29 @@ export function VideoPlayer({ videoUrl, thumbnailUrl, title }: VideoPlayerProps)
     }
   }, [])
 
+  const containerStyle: CSSProperties = {
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    MozUserSelect: "none",
+    msUserSelect: "none",
+    WebkitTouchCallout: "none",
+    WebkitUserDrag: "none",
+  } as CSSProperties
+
+  const videoStyle: CSSProperties = {
+    userSelect: "none",
+    WebkitUserSelect: "none",
+    MozUserSelect: "none",
+    msUserSelect: "none",
+    WebkitTouchCallout: "none",
+    WebkitUserDrag: "none",
+  } as CSSProperties
+
   return (
     <div
       ref={containerRef}
       className="w-full bg-black rounded-lg overflow-hidden relative select-none"
-      style={{
-        userSelect: "none",
-        WebkitUserSelect: "none",
-        MozUserSelect: "none",
-        msUserSelect: "none",
-        WebkitTouchCallout: "none",
-        WebkitUserDrag: "none",
-      }}
+      style={containerStyle}
     >
       {/* Invisible overlay to prevent interactions */}
       <div
@@ -201,14 +212,7 @@ export function VideoPlayer({ videoUrl, thumbnailUrl, title }: VideoPlayerProps)
         poster={thumbnailUrl}
         controlsList="nodownload nofullscreen noremoteplayback"
         disablePictureInPicture
-        style={{
-          userSelect: "none",
-          WebkitUserSelect: "none",
-          MozUserSelect: "none",
-          msUserSelect: "none",
-          WebkitTouchCallout: "none",
-          WebkitUserDrag: "none",
-        }}
+        style={videoStyle}
         onContextMenu={(e) => e.preventDefault()}
       >
         <source src={videoUrl} type="video/mp4" />
