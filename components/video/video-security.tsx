@@ -43,7 +43,7 @@ export function VideoSecurity() {
 
     // Prevent iframe embedding (additional security)
     if (window.self !== window.top && window.top) {
-      window.top.location = window.self.location
+      window.top.location.href = window.self.location.href
     }
 
     window.addEventListener("blur", handleBlur)
