@@ -42,7 +42,7 @@ export function VideoSecurity() {
     }
 
     // Prevent iframe embedding (additional security)
-    if (window.self !== window.top) {
+    if (window.self !== window.top && window.top) {
       window.top.location = window.self.location
     }
 
