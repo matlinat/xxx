@@ -4,6 +4,7 @@ import { VideoInfo } from "@/components/video/video-info"
 import { VideoCreatorCard } from "@/components/video/video-creator-card"
 import { VideoActions } from "@/components/video/video-actions"
 import { CreatorVideosSection } from "@/components/video/creator-videos-section"
+import { VideoSecurity } from "@/components/video/video-security"
 
 // Extended Video interface with all required fields
 interface Video {
@@ -88,6 +89,7 @@ export default async function VideoPage({
 
   return (
     <div className="min-h-screen bg-background">
+      <VideoSecurity />
       <div className="mx-auto max-w-7xl px-4 py-6 space-y-6">
         {/* Video Player Section */}
         <div className="w-full">
