@@ -16,6 +16,9 @@ interface Video {
   category: string
   isSponsored: boolean
   isFavorite: boolean
+  creator?: {
+    username: string
+  }
 }
 
 interface VideosGridProps {
@@ -133,7 +136,9 @@ export function VideosGrid({ videos }: VideosGridProps) {
               </button>
 
               {/* Video Thumbnail */}
-              <Link href={`/video/${video.id}`}>
+              <Link href={video.creator?.username 
+                ? `/creator/${video.creator.username}/video/${video.id}`
+                : `/video/${video.id}`}>
                 <div className="relative aspect-video overflow-hidden bg-muted">
                   <img
                     src={video.thumbnailUrl}

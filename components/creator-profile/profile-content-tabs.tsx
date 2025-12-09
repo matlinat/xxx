@@ -23,6 +23,7 @@ interface VideoItem {
 interface ProfileContentTabsProps {
   photos: Photo[]
   videos: VideoItem[]
+  creatorUsername: string
 }
 
 const tabs = [
@@ -30,7 +31,7 @@ const tabs = [
   { id: "videos", label: "Videos", icon: Video },
 ]
 
-export function ProfileContentTabs({ photos, videos }: ProfileContentTabsProps) {
+export function ProfileContentTabs({ photos, videos, creatorUsername }: ProfileContentTabsProps) {
   const [activeTab, setActiveTab] = useState("photos")
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const photosRef = useRef<HTMLDivElement>(null)
@@ -156,7 +157,7 @@ export function ProfileContentTabs({ photos, videos }: ProfileContentTabsProps) 
           data-section="videos"
           className="min-w-full snap-start snap-always"
         >
-          <ProfileVideosGrid videos={videos} />
+          <ProfileVideosGrid videos={videos} creatorUsername={creatorUsername} />
         </div>
       </div>
     </div>

@@ -92,6 +92,7 @@ export default async function CreatorProfilePage({
             <ProfileContentTabs
               photos={creator.photos}
               videos={creator.videos}
+              creatorUsername={creator.username}
             />
           </div>
 

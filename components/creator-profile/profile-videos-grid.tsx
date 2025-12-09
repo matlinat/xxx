@@ -3,6 +3,7 @@
 
 import { Lock, Play } from "lucide-react"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 interface VideoItem {
   id: string
@@ -13,9 +14,10 @@ interface VideoItem {
 
 interface ProfileVideosGridProps {
   videos: VideoItem[]
+  creatorUsername: string
 }
 
-export function ProfileVideosGrid({ videos }: ProfileVideosGridProps) {
+export function ProfileVideosGrid({ videos, creatorUsername }: ProfileVideosGridProps) {
   if (videos.length === 0) {
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
@@ -27,8 +29,9 @@ export function ProfileVideosGrid({ videos }: ProfileVideosGridProps) {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 gap-0.5 p-0.5">
       {videos.map((video) => (
-        <button
+        <Link
           key={video.id}
+          href={`/creator/${creatorUsername}/video/${video.id}`}
           className="relative aspect-video overflow-hidden bg-muted group"
         >
           <img
@@ -61,7 +64,7 @@ export function ProfileVideosGrid({ videos }: ProfileVideosGridProps) {
               </div>
             </div>
           )}
-        </button>
+        </Link>
       ))}
     </div>
   )

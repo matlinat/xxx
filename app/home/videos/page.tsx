@@ -14,6 +14,9 @@ interface Video {
   category: string
   isSponsored: boolean
   isFavorite: boolean
+  creator?: {
+    username: string
+  }
 }
 
 export default function VideosPage() {
@@ -33,6 +36,9 @@ export default function VideosPage() {
       category: categories[i % categories.length],
       isSponsored: i < 4,
       isFavorite: Math.random() > 0.7,
+      creator: {
+        username: `creator-${(i % 5) + 1}`,
+      },
     }))
     setVideos(dummyVideos)
     setFilteredVideos(dummyVideos)
