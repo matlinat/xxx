@@ -3,7 +3,7 @@
 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
-import { MessageCircle, Radio, Video, Image } from "lucide-react"
+import { MessageCircle, Radio, Video, Image, User } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const navItems = [
@@ -27,13 +27,18 @@ const navItems = [
     url: "/home/images", 
     icon: Image,
   },
+  { 
+    title: "Account", 
+    url: "/account", 
+    icon: User,
+  },
 ]
 
 export function BottomNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background border-t border-border shadow-[0_-2px_8px_rgba(0,0,0,0.05)] pb-safe">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background border-t border-border shadow-[0_-2px_8px_rgba(0,0,0,0.05)] pb-safe standalone:pb-6">
       <div className="flex items-center justify-around h-16 px-2">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -41,7 +46,8 @@ export function BottomNav() {
             (item.url === "/home/chat" && pathname?.startsWith("/home/chat")) ||
             (item.url === "/home/live" && pathname?.startsWith("/home/live")) ||
             (item.url === "/home/videos" && pathname?.startsWith("/home/videos")) ||
-            (item.url === "/home/images" && pathname?.startsWith("/home/images"))
+            (item.url === "/home/images" && pathname?.startsWith("/home/images")) ||
+            (item.url === "/account" && pathname?.startsWith("/account"))
 
           return (
             <Link
@@ -54,14 +60,14 @@ export function BottomNav() {
             >
               <div className="relative flex items-center justify-center">
                 {isActive ? (
-                  <Icon className="size-6 fill-current text-purple-600 transition-all" />
+                  <Icon className="size-5 fill-current text-purple-600 transition-all" />
                 ) : (
-                  <Icon className="size-6 text-muted-foreground opacity-70 transition-all" strokeWidth={2} />
+                  <Icon className="size-5 text-muted-foreground opacity-70 transition-all" strokeWidth={2} />
                 )}
               </div>
               <span
                 className={cn(
-                  "text-[11px] leading-tight mt-0.5 transition-colors",
+                  "text-[10px] leading-tight mt-0.5 transition-colors",
                   isActive
                     ? "font-semibold text-purple-600"
                     : "font-normal text-muted-foreground opacity-70"

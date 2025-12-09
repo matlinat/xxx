@@ -207,4 +207,11 @@
     .pr-safe {
         padding-right: env(safe-area-inset-right, 0);
     }
+    
+    /* PWA Standalone Mode Support */
+    @media (display-mode: standalone) {
+        .standalone\:pb-6 {
+            padding-bottom: 1.5rem;
+        }
+    }
 }
