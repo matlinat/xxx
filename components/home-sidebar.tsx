@@ -15,8 +15,10 @@ import {
   Megaphone,
   FolderOpen,
   BarChart3,
+  Upload,
 } from "lucide-react"
 import { NavMain } from "@/components/(dashboard)/nav-main"
+import { NavSecondary } from "@/components/(dashboard)/nav-secondary"
 import { NavUser } from "@/components/nav-user/nav-user"
 import {
   Sidebar,
@@ -26,6 +28,8 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarSeparator,
+  SidebarGroup,
+  SidebarGroupLabel,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 
@@ -86,7 +90,30 @@ export function HomeSidebar({
         {isCreator && (
           <>
             <SidebarSeparator className="my-4" />
-            <NavMain items={creatorNavItems} className="px-2" />
+            <SidebarGroup>
+              <SidebarMenu className="px-2">
+                {creatorNavItems.map((item) => (
+                  <React.Fragment key={item.title}>
+                    <SidebarMenuItem>
+                      <NavMain items={[item]} />
+                    </SidebarMenuItem>
+                    {item.title === "Media Library" && (
+                      <SidebarMenuItem className="pl-6">
+                        <NavSecondary
+                          items={[
+                            {
+                              title: "Video Upload",
+                              url: "/home/creator/media/upload",
+                              icon: Upload,
+                            },
+                          ]}
+                        />
+                      </SidebarMenuItem>
+                    )}
+                  </React.Fragment>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
           </>
         )}
       </SidebarContent>
