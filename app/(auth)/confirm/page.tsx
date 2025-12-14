@@ -24,7 +24,7 @@ export default function ConfirmPage() {
                 <div className="space-y-1 text-sm">
                   <p className="font-medium">Nächste Schritte:</p>
                   <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                    <li>Öffne dein E-Mail-Postfach</li>
+                    <li>Öffne dein E-Mail-Postfach!</li>
                     <li>Suche nach der E-Mail von uns</li>
                     <li>Klicke auf den Bestätigungslink</li>
                     <li>Melde dich dann mit deinem Konto an</li>
