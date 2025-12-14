@@ -7,6 +7,7 @@ import { Bold, Italic, List, Smile } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import dynamic from "next/dynamic"
+import { Theme } from "emoji-picker-react"
 
 // Dynamically import emoji picker to avoid SSR issues
 const EmojiPicker = dynamic(
@@ -109,7 +110,7 @@ export function VideoDescriptionEditor({
             <div className="absolute z-50 top-full left-0 mt-2">
               <EmojiPicker
                 onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
-                theme="light"
+                theme={Theme.LIGHT}
                 width={350}
                 height={400}
               />
