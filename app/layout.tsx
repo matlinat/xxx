@@ -1,6 +1,7 @@
 // app/layout.tsx
 import "./globals.css"
 import type { Metadata, Viewport } from "next"
+import { Toaster } from "@/components/ui/sonner"
 
 export const metadata: Metadata = {
   title: "xxx - Verdiene mehr mit deinem Content. Wir schützen, was dir wichtig ist.",
@@ -15,7 +16,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="de" className="dark">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster />
+      </body>
     </html>
   )
 }

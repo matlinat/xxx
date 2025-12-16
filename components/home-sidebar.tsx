@@ -16,6 +16,7 @@ import {
   FolderOpen,
   BarChart3,
   Upload,
+  UserCircle,
 } from "lucide-react"
 import { NavMain } from "@/components/(dashboard)/nav-main"
 import { NavSecondary } from "@/components/(dashboard)/nav-secondary"
@@ -49,6 +50,7 @@ const navItems = [
 
 const creatorNavItems = [
   { title: "Dashboard", url: "/home/creator", icon: LayoutDashboard },
+  { title: "Profil bearbeiten", url: "/home/creator/profile", icon: UserCircle },
   { title: "Earnings", url: "/home/creator/earnings", icon: DollarSign },
   { title: "Marketing", url: "/home/creator/marketing", icon: Megaphone },
   { title: "Media Library", url: "/home/creator/media", icon: FolderOpen },

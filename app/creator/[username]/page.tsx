@@ -4,53 +4,8 @@ import { ProfileDetails } from "@/components/creator-profile/profile-details"
 import { ProfileAbout } from "@/components/creator-profile/profile-about"
 import { ProfileContentTabs } from "@/components/creator-profile/profile-content-tabs"
 import { ProfileChatButton } from "@/components/creator-profile/profile-chat-button"
-
-// Mock-Daten für die Entwicklung
-const mockCreator = {
-  username: "sexylisa",
-  nickname: "Sexy Lisa",
-  avatarUrl: "https://placehold.co/200x200/pink/white?text=SL",
-  coverUrl: "https://placehold.co/1200x400/purple/white?text=Cover",
-  isOnline: true,
-  availableFor: "live-chat" as const, // "live-chat" | "live-video" | "offline"
-  fansCount: 1234,
-  about: `<p>Hey, ich bin Lisa! 💕</p>
-<p>Ich liebe es, neue Leute kennenzulernen und gemeinsam Spaß zu haben. Bei mir findest du authentische Inhalte und echte Interaktion.</p>
-<p>Schreib mir gerne eine Nachricht - ich freue mich auf dich! 😘</p>`,
-  details: {
-    gender: "Weiblich",
-    age: 25,
-    location: "10115 Berlin",
-    languages: ["Deutsch", "Englisch"],
-    relationshipStatus: "Single",
-    sexualOrientation: "Bisexuell",
-    height: 168,
-    weight: 55,
-    hairColor: "Blond",
-    eyeColor: "Blau",
-    zodiacSign: "Löwe",
-    tattoos: "Ja",
-    piercings: "Nein",
-    intimateShaving: "Vollrasiert",
-    bodyType: "Sportlich",
-    penisSize: null,
-    sexualPreferences: ["Anal", "Outdoor", "Rollenspiele", "Dessous", "Toys"],
-  },
-  photos: [
-    { id: "1", url: "https://placehold.co/400x400/pink/white?text=1", isLocked: false },
-    { id: "2", url: "https://placehold.co/400x400/purple/white?text=2", isLocked: true },
-    { id: "3", url: "https://placehold.co/400x400/rose/white?text=3", isLocked: false },
-    { id: "4", url: "https://placehold.co/400x400/fuchsia/white?text=4", isLocked: true },
-    { id: "5", url: "https://placehold.co/400x400/violet/white?text=5", isLocked: false },
-    { id: "6", url: "https://placehold.co/400x400/indigo/white?text=6", isLocked: true },
-  ],
-  videos: [
-    { id: "1", thumbnailUrl: "https://placehold.co/400x225/red/white?text=Video+1", duration: "5:32", isLocked: false },
-    { id: "2", thumbnailUrl: "https://placehold.co/400x225/orange/white?text=Video+2", duration: "12:45", isLocked: true },
-    { id: "3", thumbnailUrl: "https://placehold.co/400x225/amber/white?text=Video+3", duration: "3:18", isLocked: false },
-    { id: "4", thumbnailUrl: "https://placehold.co/400x225/yellow/white?text=Video+4", duration: "8:55", isLocked: true },
-  ],
-}
+import { getCreatorProfileByUsername } from "@/lib/supabase/creator-profiles"
+import { notFound } from "next/navigation"
 
 export default async function CreatorProfilePage({
   params,
@@ -59,9 +14,46 @@ export default async function CreatorProfilePage({
 }) {
   const { username } = await params
   
-  // Später: Daten aus Supabase laden
-  // const creator = await getCreatorByUsername(username)
-  const creator = { ...mockCreator, username }
+  // Daten aus Supabase laden
+  const profileData = await getCreatorProfileByUsername(username)
+  
+  if (!profileData) {
+    notFound()
+  }
+
+  // Transformiere Datenbank-Daten in das erwartete Format
+  const creator = {
+    username: profileData.username,
+    nickname: profileData.nickname || username,
+    avatarUrl: profileData.avatar_url || "https://placehold.co/200x200/purple/white?text=" + (profileData.nickname?.[0] || username[0]).toUpperCase(),
+    coverUrl: profileData.cover_url || "https://placehold.co/1200x400/purple/white?text=Cover",
+    isOnline: profileData.is_online,
+    availableFor: profileData.available_for as "live-chat" | "live-video" | "offline",
+    fansCount: profileData.fans_count,
+    about: profileData.about || "",
+    details: {
+      gender: profileData.gender || "",
+      age: profileData.age || 0,
+      location: profileData.location || "",
+      languages: profileData.languages || [],
+      relationshipStatus: profileData.relationship_status || "",
+      sexualOrientation: profileData.sexual_orientation || "",
+      height: profileData.height || 0,
+      weight: profileData.weight || 0,
+      hairColor: profileData.hair_color || "",
+      eyeColor: profileData.eye_color || "",
+      zodiacSign: profileData.zodiac_sign || "",
+      tattoos: profileData.tattoos || "",
+      piercings: profileData.piercings || "",
+      intimateShaving: profileData.intimate_shaving || "",
+      bodyType: profileData.body_type || "",
+      penisSize: profileData.penis_size || null,
+      sexualPreferences: profileData.sexual_preferences || [],
+    },
+    // TODO: Photos und Videos aus separater Tabelle laden
+    photos: [],
+    videos: [],
+  }
 
   return (
     <div className="min-h-screen bg-background">
