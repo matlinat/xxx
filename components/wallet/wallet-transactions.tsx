@@ -239,9 +239,9 @@ export function WalletTransactions({ userId }: WalletTransactionsProps) {
                     >
                       <div className="flex items-center justify-end gap-1">
                         {isPositive ? (
-                          <ArrowDown className="size-4" />
-                        ) : (
                           <ArrowUp className="size-4" />
+                        ) : (
+                          <ArrowDown className="size-4" />
                         )}
                         {isPositive ? "+" : ""}
                         {Math.abs(transaction.amount).toFixed(2)} Credits
