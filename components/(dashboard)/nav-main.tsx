@@ -6,6 +6,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 type NavItem = {
@@ -23,6 +24,14 @@ export function NavMain({
   className?: string
 }) {
   const pathname = usePathname()
+  const { isMobile, setOpenMobile } = useSidebar()
+
+  const handleLinkClick = () => {
+    // Schließe Sidebar auf Mobile beim Klick auf einen Link
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   return (
     <SidebarMenu className={className}>
@@ -33,7 +42,7 @@ export function NavMain({
         return (
           <SidebarMenuItem key={item.title}>
             <SidebarMenuButton asChild isActive={isActive}>
-              <Link href={item.url}>
+              <Link href={item.url} onClick={handleLinkClick}>
                 {Icon ? <Icon /> : null}
                 <span>{item.title}</span>
               </Link>

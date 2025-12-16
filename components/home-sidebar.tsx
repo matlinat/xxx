@@ -32,6 +32,7 @@ import {
   SidebarGroup,
   SidebarGroupLabel,
   SidebarGroupContent,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 
@@ -65,6 +66,14 @@ export function HomeSidebar({
 }: React.ComponentProps<typeof Sidebar> & { user?: UIUser; role?: string }) {
   const isCreator = role === "creator"
   const isSubscriber = role === "subscriber"
+  const { isMobile, setOpenMobile } = useSidebar()
+
+  const handleLinkClick = () => {
+    // Schließe Sidebar auf Mobile beim Klick auf einen Link
+    if (isMobile) {
+      setOpenMobile(false)
+    }
+  }
 
   return (
     <Sidebar {...props}>
@@ -72,7 +81,7 @@ export function HomeSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg">
-              <Link href="/home">
+              <Link href="/home" onClick={handleLinkClick}>
                 <span>SaucySilk</span>
               </Link>
             </SidebarMenuButton>
@@ -116,7 +125,7 @@ export function HomeSidebar({
           <SidebarMenu className="mb-2">
             <SidebarMenuItem>
               <SidebarMenuButton asChild>
-                <Link href="/home/subscriber/wallet">
+                <Link href="/home/subscriber/wallet" onClick={handleLinkClick}>
                   <Wallet className="size-4" />
                   <span>Wallet</span>
                 </Link>
@@ -133,7 +142,7 @@ export function HomeSidebar({
             size="lg"
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold"
           >
-            <Link href="/signup/creator" className="flex items-center justify-center gap-2">
+            <Link href="/signup/creator" onClick={handleLinkClick} className="flex items-center justify-center gap-2">
               <Star className="size-4 fill-white" />
               <span>Creator werden</span>
             </Link>
