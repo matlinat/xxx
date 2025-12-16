@@ -34,62 +34,6 @@ type MonthOption = "all" | string
 export function WalletTransactions({ userId }: WalletTransactionsProps) {
   const [transactions, setTransactions] = React.useState<WalletTransaction[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
-    {
-      id: "1",
-      date: new Date("2024-03-15T10:30:00"),
-      type: "topup",
-      description: "Credits aufladen",
-      amount: 100,
-      balance: 1250.50,
-    },
-    {
-      id: "2",
-      date: new Date("2024-03-14T14:20:00"),
-      type: "expense",
-      description: "Video-Kauf: Premium Content",
-      amount: -25.50,
-      balance: 1150.50,
-    },
-    {
-      id: "3",
-      date: new Date("2024-03-12T09:15:00"),
-      type: "expense",
-      description: "Live-Chat Session",
-      amount: -15.00,
-      balance: 1176.00,
-    },
-    {
-      id: "4",
-      date: new Date("2024-03-10T16:45:00"),
-      type: "topup",
-      description: "Credits aufladen (+15 Bonus)",
-      amount: 250,
-      balance: 1191.00,
-    },
-    {
-      id: "5",
-      date: new Date("2024-03-08T11:30:00"),
-      type: "expense",
-      description: "Premium Video Abo",
-      amount: -50.00,
-      balance: 941.00,
-    },
-    {
-      id: "6",
-      date: new Date("2024-03-05T13:20:00"),
-      type: "topup",
-      description: "Credits aufladen",
-      amount: 50,
-      balance: 991.00,
-    },
-    {
-      id: "7",
-      date: new Date("2024-02-28T10:00:00"),
-      type: "expense",
-      description: "Video-Kauf: Exclusive Content",
-      amount: -30.00,
-      balance: 941.00,
-    },
   const [sortBy, setSortBy] = React.useState<SortOption>("date-desc")
   const [filterBy, setFilterBy] = React.useState<FilterOption>("all")
   const [monthFilter, setMonthFilter] = React.useState<MonthOption>("all")
