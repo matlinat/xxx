@@ -16,6 +16,7 @@ import {
   BarChart3,
   Upload,
   UserCircle,
+  Wallet,
 } from "lucide-react"
 import { NavMain } from "@/components/(dashboard)/nav-main"
 import { NavSecondary } from "@/components/(dashboard)/nav-secondary"
@@ -63,6 +64,7 @@ export function HomeSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user?: UIUser; role?: string }) {
   const isCreator = role === "creator"
+  const isSubscriber = role === "subscriber"
 
   return (
     <Sidebar {...props}>
@@ -107,8 +109,22 @@ export function HomeSidebar({
         )}
       </SidebarContent>
 
-      {/* Footer: "Creator werden" Button (nur wenn nicht eingeloggt) oder User-Bereich (wenn eingeloggt) */}
+      {/* Footer: Wallet-Link (nur für Subscriber), "Creator werden" Button (nur wenn nicht eingeloggt) oder User-Bereich (wenn eingeloggt) */}
       <SidebarFooter>
+        {/* Wallet-Link für Subscriber - sticky unten */}
+        {isSubscriber && (
+          <SidebarMenu className="mb-2">
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <Link href="/home/subscriber/wallet">
+                  <Wallet className="size-4" />
+                  <span>Wallet</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        )}
+        
         {user ? (
           <NavUser user={user} />
         ) : (

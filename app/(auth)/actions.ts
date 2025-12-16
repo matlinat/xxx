@@ -4,6 +4,14 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { saveCreatorProfile, getCreatorProfileByUserId } from '@/lib/supabase/creator-profiles'
+import {
+  getWalletBalance,
+  getWalletTransactions,
+  createTopUpTransaction,
+  createBonusTransaction,
+  type TransactionFilters,
+  type TopUpPaymentData,
+} from '@/lib/supabase/wallet'
 
 // Admin-Client für DB-Eintrag nach Registrierung
 const supabaseAdmin = createAdminClient(
@@ -206,4 +214,116 @@ export async function getCreatorProfileAction() {
   const creatorProfile = await getCreatorProfileByUserId(user.id)
   
   return { data: creatorProfile }
+}
+
+// Wallet Actions
+
+export async function getWalletBalanceAction() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { error: 'Nicht eingeloggt' }
+  }
+  
+  // Prüfe Subscriber-Rolle
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('auth_user_id', user.id)
+    .single()
+  
+  if (profile?.role !== 'subscriber') {
+    return { error: 'Nur Subscriber können ihren Kontostand abrufen' }
+  }
+  
+  try {
+    const balance = await getWalletBalance(user.id)
+    return { data: balance }
+  } catch (error) {
+    console.error('Error getting wallet balance:', error)
+    return { error: error instanceof Error ? error.message : 'Fehler beim Laden des Kontostands' }
+  }
+}
+
+export async function getWalletTransactionsAction(filters?: TransactionFilters) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { error: 'Nicht eingeloggt' }
+  }
+  
+  // Prüfe Subscriber-Rolle
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('auth_user_id', user.id)
+    .single()
+  
+  if (profile?.role !== 'subscriber') {
+    return { error: 'Nur Subscriber können ihre Transaktionen abrufen' }
+  }
+  
+  try {
+    const transactions = await getWalletTransactions(user.id, filters)
+    return { data: transactions }
+  } catch (error) {
+    console.error('Error getting wallet transactions:', error)
+    return { error: error instanceof Error ? error.message : 'Fehler beim Laden der Transaktionen' }
+  }
+}
+
+export async function createTopUpTransactionAction(formData: FormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) {
+    return { error: 'Nicht eingeloggt' }
+  }
+  
+  // Prüfe Subscriber-Rolle
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('auth_user_id', user.id)
+    .single()
+  
+  if (profile?.role !== 'subscriber') {
+    return { error: 'Nur Subscriber können Credits aufladen' }
+  }
+  
+  const amount = parseFloat(String(formData.get('amount') || '0'))
+  const bonusAmount = parseFloat(String(formData.get('bonus') || '0'))
+  const paymentMethod = String(formData.get('payment_method') || '').trim() || undefined
+  const paymentReference = String(formData.get('payment_reference') || '').trim() || undefined
+  
+  if (!amount || amount <= 0) {
+    return { error: 'Ungültiger Betrag' }
+  }
+  
+  try {
+    const paymentData: TopUpPaymentData = {
+      payment_method: paymentMethod,
+      payment_reference: paymentReference,
+      description: `Credits aufladen: ${amount.toFixed(2)} Credits`,
+    }
+    
+    // Erstelle Top-up Transaktion
+    const result = await createTopUpTransaction(user.id, amount, paymentData)
+    
+    // Wenn Bonus vorhanden, erstelle Bonus-Transaktion
+    if (bonusAmount > 0) {
+      await createBonusTransaction(
+        user.id,
+        bonusAmount,
+        `Willkommens-Bonus für ${amount.toFixed(2)} Credits Aufladung`
+      )
+    }
+    
+    return { success: true, data: result }
+  } catch (error) {
+    console.error('Error creating top-up transaction:', error)
+    return { error: error instanceof Error ? error.message : 'Fehler beim Aufladen der Credits' }
+  }
 }

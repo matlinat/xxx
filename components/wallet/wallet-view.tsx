@@ -2,29 +2,50 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { WalletTransactions } from "@/components/wallet/wallet-transactions"
 import { WalletBalance } from "@/components/wallet/wallet-balance"
 import { WalletTopUp } from "@/components/wallet/wallet-topup"
 import { WalletBonuses } from "@/components/wallet/wallet-bonuses"
-import { Plus, Gift } from "lucide-react"
+import { Plus } from "lucide-react"
+import { getWalletBalanceAction } from "@/app/(auth)/actions"
 
 interface WalletViewProps {
   userId: string
 }
 
 export function WalletView({ userId }: WalletViewProps) {
-  // TODO: Lade echte Daten aus der Datenbank
-  // Für jetzt verwenden wir Dummy-Daten
-  const [balance] = React.useState(1250.50)
-  const [showTopUp, setShowTopUp] = React.useState(false)
+  const [balance, setBalance] = React.useState<number>(0)
+  const [isLoading, setIsLoading] = React.useState(true)
+
+  const loadBalance = React.useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const result = await getWalletBalanceAction()
+      if (result.data) {
+        setBalance(result.data.balance)
+      }
+    } catch (error) {
+      console.error('Error loading balance:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  React.useEffect(() => {
+    loadBalance()
+  }, [loadBalance])
+
+  const handleTopUpSuccess = React.useCallback(() => {
+    // Lade Balance neu nach erfolgreichem Top-up
+    loadBalance()
+  }, [loadBalance])
 
   return (
     <div className="space-y-6">
       {/* Kontostand und Top-up CTA */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <WalletBalance balance={balance} />
+          <WalletBalance balance={isLoading ? 0 : balance} />
         </div>
         <div>
           <Card>
@@ -37,10 +58,7 @@ export function WalletView({ userId }: WalletViewProps) {
             <CardContent>
               <WalletTopUp 
                 userId={userId}
-                onSuccess={() => {
-                  // TODO: Balance aktualisieren
-                  setShowTopUp(false)
-                }}
+                onSuccess={handleTopUpSuccess}
               />
             </CardContent>
           </Card>

@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Plus, Sparkles } from "lucide-react"
+import { createTopUpTransactionAction } from "@/app/(auth)/actions"
+import { toast } from "sonner"
 
 interface WalletTopUpProps {
   userId: string
@@ -39,23 +41,47 @@ export function WalletTopUp({ userId, onSuccess }: WalletTopUpProps) {
       : parseFloat(selectedAmount)
 
     if (!amount || amount <= 0) {
-      alert("Bitte wählen Sie einen gültigen Betrag aus.")
+      toast.error("Bitte wählen Sie einen gültigen Betrag aus.")
       return
     }
 
     setIsLoading(true)
     
-    // TODO: Implementiere echte Top-up Logik
-    // Hier würde die Zahlung verarbeitet werden
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    setIsLoading(false)
-    alert(`Top-up erfolgreich! ${amount} Credits wurden hinzugefügt.`)
-    onSuccess?.()
-    
-    // Reset form
-    setSelectedAmount("")
-    setCustomAmount("")
+    try {
+      const selectedOption = topUpAmounts.find(
+        opt => opt.amount.toString() === selectedAmount
+      )
+      const bonusAmount = selectedOption?.bonus || 0
+      const totalAmount = amount + bonusAmount
+
+      const formData = new FormData()
+      formData.append('amount', amount.toString())
+      formData.append('bonus', bonusAmount.toString())
+      formData.append('payment_method', 'manual') // TODO: Echte Zahlungsmethode
+      formData.append('payment_reference', `topup-${Date.now()}`)
+
+      const result = await createTopUpTransactionAction(formData)
+      
+      if (result.error) {
+        toast.error(result.error)
+        return
+      }
+
+      toast.success(
+        `Top-up erfolgreich! ${totalAmount.toFixed(2)} Credits wurden hinzugefügt${bonusAmount > 0 ? ` (inkl. ${bonusAmount} Bonus)` : ''}.`
+      )
+      
+      onSuccess?.()
+      
+      // Reset form
+      setSelectedAmount("")
+      setCustomAmount("")
+    } catch (error) {
+      console.error('Error creating top-up:', error)
+      toast.error("Fehler beim Aufladen der Credits. Bitte versuchen Sie es erneut.")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const selectedOption = topUpAmounts.find(
