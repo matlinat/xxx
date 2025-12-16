@@ -85,3 +85,13 @@ WITH CHECK (user_id = auth.uid());
 CREATE POLICY "Public profiles are viewable by everyone"
 ON creator_profiles FOR SELECT
 USING (true);
+
+-- WICHTIG: Für öffentlichen Zugriff auf Creator-Profile muss auch die users-Tabelle
+-- eine öffentliche RLS-Policy haben. Diese Policy muss manuell in Supabase ausgeführt werden:
+--
+-- CREATE POLICY "Public can view creator usernames"
+-- ON users FOR SELECT
+-- USING (role = 'creator');
+--
+-- Diese Policy erlaubt anonymen und eingeloggten Nutzern, die username und auth_user_id
+-- von Creators zu lesen, was für die Profil-Anzeige unter /creator/[username] notwendig ist.

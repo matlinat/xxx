@@ -11,6 +11,19 @@ Diese Dokumentation beschreibt die Einrichtung der Creator-Profil-Funktionalitä
    - Trigger für `updated_at`
    - RLS Policies für Sicherheit
 
+### WICHTIG: Users-Tabelle RLS Policy
+
+Für öffentlichen Zugriff auf Creator-Profile muss zusätzlich eine RLS-Policy auf der `users`-Tabelle erstellt werden:
+
+```sql
+-- Erlaube öffentlichen Zugriff auf Creator-Usernames für Profil-Anzeige
+CREATE POLICY "Public can view creator usernames"
+ON users FOR SELECT
+USING (role = 'creator');
+```
+
+Diese Policy ermöglicht es anonymen und eingeloggten Nutzern (nicht nur Creators), die `username` und `auth_user_id` von Creators zu lesen, was für die Profil-Anzeige unter `/creator/[username]` notwendig ist.
+
 ## Storage Setup
 
 Für Avatar- und Cover-Uploads müssen zwei Supabase Storage Buckets erstellt werden:
@@ -79,6 +92,7 @@ Die `creator_profiles` Tabelle ist über `user_id` mit der `users` Tabelle verkn
 
 - RLS Policies stellen sicher, dass:
   - Creator nur ihr eigenes Profil bearbeiten können
-  - Öffentliche Profile von allen gelesen werden können
+  - Öffentliche Profile von allen gelesen werden können (via `creator_profiles` Policy)
+  - Creator-Usernames öffentlich lesbar sind (via `users` Policy für `role = 'creator'`)
 - Middleware schützt die Bearbeitungsroute `/home/creator/profile`
 - Server Actions validieren die Creator-Rolle

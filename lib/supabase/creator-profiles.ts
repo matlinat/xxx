@@ -62,27 +62,51 @@ export async function getCreatorProfileByUserId(userId: string): Promise<Creator
 
 /**
  * Lädt ein Creator-Profil über den username
- * Für öffentliche Profile
+ * Für öffentliche Profile - funktioniert auch ohne Authentifizierung
+ * 
+ * Diese Funktion benötigt eine RLS-Policy auf der users-Tabelle:
+ * CREATE POLICY "Public can view creator usernames"
+ * ON users FOR SELECT
+ * USING (role = 'creator');
  */
 export async function getCreatorProfileByUsername(username: string): Promise<CreatorProfileWithUsername | null> {
   const supabase = await createClient()
   
   // Zuerst User über username finden
+  // Wichtig: Diese Query benötigt eine öffentliche RLS-Policy auf der users-Tabelle
   const { data: userData, error: userError } = await supabase
     .from('users')
     .select('auth_user_id, username')
     .eq('username', username)
     .eq('role', 'creator')
-    .single()
+    .maybeSingle()
 
-  if (userError || !userData) {
+  if (userError) {
+    // Spezifische Fehlerbehandlung
+    if (userError.code === 'PGRST116') {
+      // Kein User mit diesem Username gefunden oder kein Creator
+      return null
+    }
+    // RLS-Policy-Fehler oder andere Zugriffsfehler
+    if (userError.message?.includes('permission') || userError.message?.includes('policy') || userError.message?.includes('RLS')) {
+      console.error('RLS Policy Error: Die users-Tabelle benötigt eine öffentliche Policy für Creator-Usernames. Siehe docs/creator-profiles-schema.sql')
+      return null
+    }
+    console.error('Error fetching creator user:', userError)
+    return null
+  }
+
+  if (!userData) {
+    // Kein Creator mit diesem Username gefunden
     return null
   }
 
   // Dann Profil über user_id laden
+  // Diese Query funktioniert öffentlich dank der "Public profiles are viewable by everyone" Policy
   const profile = await getCreatorProfileByUserId(userData.auth_user_id)
   
   if (!profile) {
+    // Creator existiert, aber hat noch kein Profil erstellt
     return null
   }
 

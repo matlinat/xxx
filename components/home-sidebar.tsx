@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import {
   Compass,
   Video,
@@ -28,9 +27,10 @@ import {
   SidebarHeader,
   SidebarMenu,
   SidebarMenuItem,
-  SidebarSeparator,
+  SidebarMenuButton,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarGroupContent,
 } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
 
@@ -69,54 +69,41 @@ export function HomeSidebar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <Link
-              href="/home"
-              className="flex items-center gap-4 px-5 py-4 font-semibold text-2xl md:text-xl select-none"
-            >
-              <img
-                src="/icon.png"
-                alt="SaucySilk"
-                className="size-14 md:size-12 rounded-md"
-              />
-              <span className="inline-block">SaucySilk</span>
-            </Link>
+            <SidebarMenuButton asChild size="lg">
+              <Link href="/home">
+                <span>SaucySilk</span>
+              </Link>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent className="px-2">
-        {/* Hauptnavigation */}
-        <NavMain items={navItems} className="mt-6 px-2" />
+      <SidebarContent>
+        {/* Public Navigation */}
+        <SidebarGroup>
+          <SidebarGroupLabel>Public</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <NavMain items={navItems} />
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-        {/* Creator Navigation - nur für Creator sichtbar */}
+        {/* Private Navigation - nur für Creator sichtbar */}
         {isCreator && (
-          <>
-            <SidebarSeparator className="my-4" />
-            <SidebarGroup>
-              <SidebarMenu className="px-2">
-                {creatorNavItems.map((item) => (
-                  <React.Fragment key={item.title}>
-                    <SidebarMenuItem>
-                      <NavMain items={[item]} />
-                    </SidebarMenuItem>
-                    {item.title === "Media Library" && (
-                      <SidebarMenuItem className="pl-6">
-                        <NavSecondary
-                          items={[
-                            {
-                              title: "Video Upload",
-                              url: "/home/creator/media/upload",
-                              icon: Upload,
-                            },
-                          ]}
-                        />
-                      </SidebarMenuItem>
-                    )}
-                  </React.Fragment>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          </>
+          <SidebarGroup>
+            <SidebarGroupLabel>Private</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavMain items={creatorNavItems} />
+              <NavSecondary
+                items={[
+                  {
+                    title: "Video Upload",
+                    url: "/home/creator/media/upload",
+                    icon: Upload,
+                  },
+                ]}
+              />
+            </SidebarGroupContent>
+          </SidebarGroup>
         )}
       </SidebarContent>
 
@@ -125,18 +112,16 @@ export function HomeSidebar({
         {user ? (
           <NavUser user={user} />
         ) : (
-          <div className="px-2 pb-2">
-            <Button
-              asChild
-              size="lg"
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold text-base md:text-sm h-12 md:h-10 shadow-lg"
-            >
-              <Link href="/signup/creator" className="flex items-center justify-center gap-2">
-                <Star className="size-5 md:size-4 fill-white" />
-                <span>Creator werden</span>
-              </Link>
-            </Button>
-          </div>
+          <Button
+            asChild
+            size="lg"
+            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold"
+          >
+            <Link href="/signup/creator" className="flex items-center justify-center gap-2">
+              <Star className="size-4 fill-white" />
+              <span>Creator werden</span>
+            </Link>
+          </Button>
         )}
       </SidebarFooter>
     </Sidebar>
