@@ -117,7 +117,7 @@ export default function VideoUploadPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-6">
       <div className="flex items-center gap-3 mb-6">
         <Upload className="size-8 text-blue-500" />
         <h1 className="text-2xl font-bold">Video Upload</h1>

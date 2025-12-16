@@ -6,6 +6,7 @@ import { createMiddlewareClient } from '@/lib/supabase/middleware'
 const protectedRoutes: Record<string, string[]> = {
   '/home/creator': ['creator'],
   '/home/admin': ['admin'],
+  '/home/subscriber': ['subscriber'],
 }
 
 export async function middleware(request: NextRequest) {
@@ -50,5 +51,6 @@ export const config = {
     // Geschützte Bereiche
     '/home/creator/:path*',
     '/home/admin/:path*',
+    '/home/subscriber/:path*',
   ],
 }
