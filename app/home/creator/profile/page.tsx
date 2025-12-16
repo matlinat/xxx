@@ -3,6 +3,7 @@ import { ProfileEditForm } from "@/components/creator-profile/profile-edit-form"
 import { getCreatorProfileAction } from "@/app/(auth)/actions"
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
+import { getCachedUserRole } from "@/lib/supabase/user-cache"
 
 export default async function CreatorProfileEditPage() {
   const supabase = await createClient()
@@ -12,14 +13,10 @@ export default async function CreatorProfileEditPage() {
     redirect('/home')
   }
 
-  // Prüfe Creator-Rolle
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('auth_user_id', user.id)
-    .single()
+  // Prüfe Creator-Rolle (gecacht innerhalb des Request-Zyklus)
+  const userRole = await getCachedUserRole(user.id)
 
-  if (profile?.role !== 'creator') {
+  if (userRole !== 'creator') {
     redirect('/home')
   }
 

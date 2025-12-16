@@ -1,5 +1,6 @@
 // components/nav-user/NavUserServer.tsx
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUserProfile } from "@/lib/supabase/user-cache";
 import { NavUser } from "./nav-user";
 
 export default async function NavUserServer() {
@@ -13,12 +14,8 @@ export default async function NavUserServer() {
     );
   }
 
-  // Username & Avatar aus eigener Tabelle laden (auth_user_id = auth.users.id)
-  const { data: profile } = await supabase
-    .from("users")
-    .select("username, avatar_url")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
+  // Username & Avatar aus eigener Tabelle laden (gecacht innerhalb des Request-Zyklus)
+  const profile = await getCachedUserProfile(user.id);
 
   return (
     <NavUser

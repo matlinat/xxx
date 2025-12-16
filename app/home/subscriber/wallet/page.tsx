@@ -1,6 +1,7 @@
 import { Wallet } from "lucide-react"
 import { WalletView } from "@/components/wallet/wallet-view"
 import { createClient } from "@/lib/supabase/server"
+import { getCachedUserRole } from "@/lib/supabase/user-cache"
 import { redirect } from "next/navigation"
 
 export default async function SubscriberWalletPage() {
@@ -11,14 +12,10 @@ export default async function SubscriberWalletPage() {
     redirect('/home')
   }
 
-  // Prüfe Subscriber-Rolle
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('auth_user_id', user.id)
-    .single()
+  // Prüfe Subscriber-Rolle (gecacht innerhalb des Request-Zyklus)
+  const userRole = await getCachedUserRole(user.id)
 
-  if (profile?.role !== 'subscriber') {
+  if (userRole !== 'subscriber') {
     redirect('/home')
   }
 
