@@ -133,13 +133,14 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       </div>
 
       {/* Messages Area - WhatsApp Style: neueste unten */}
-      <div className="flex-1 overflow-y-auto py-4 pb-[180px] md:pb-4 flex flex-col">
-        <div className="flex-1" />
-        {messages.map((message) => (
-          <ChatMessage key={message.id} message={message} />
-        ))}
-        {/* Scroll-Anker für Auto-Scroll */}
-        <div ref={messagesEndRef} />
+      <div className="flex-1 overflow-y-auto pb-[180px] md:pb-4">
+        <div className="min-h-full flex flex-col justify-end py-4">
+          {messages.map((message) => (
+            <ChatMessage key={message.id} message={message} />
+          ))}
+          {/* Scroll-Anker für Auto-Scroll */}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area - Sticky am unteren Rand auf Mobile */}
