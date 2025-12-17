@@ -17,17 +17,21 @@ export default function ChatDetailPage() {
         <ChatList selectedChatId={chatId} />
       </div>
 
-      {/* Chat-Ansicht mit Slide-Animation auf Mobile */}
+      {/* Mobile: Chat-Ansicht mit Slide-Animation */}
       <motion.div
-        key={chatId}
-        initial={{ x: '100%', opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-        exit={{ x: '100%', opacity: 0 }}
+        key={`chat-mobile-${chatId}`}
+        initial={{ x: '100%' }}
+        animate={{ x: 0 }}
         transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-        className="flex-1 flex flex-col min-w-0 overflow-hidden"
+        className="md:hidden flex-1 flex flex-col min-w-0 overflow-hidden"
       >
         <ChatView chatId={chatId} showBackButton={true} />
       </motion.div>
+
+      {/* Desktop: Chat-Ansicht ohne Animation */}
+      <div className="hidden md:flex flex-1 flex-col min-w-0 overflow-hidden">
+        <ChatView chatId={chatId} showBackButton={false} />
+      </div>
     </div>
   )
 }

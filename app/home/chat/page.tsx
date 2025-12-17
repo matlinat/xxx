@@ -25,17 +25,24 @@ function ChatContent() {
         <ChatList selectedChatId={chatId || null} />
       </div>
 
-      {/* Chat-Ansicht: nur Slide-In Animation beim Öffnen */}
-      {chatId ? (
+      {/* Mobile: Chat-Ansicht mit Slide-In Animation */}
+      {chatId && (
         <motion.div
-          key={`chat-${chatId}`}
+          key={`chat-mobile-${chatId}`}
           initial={{ x: '100%' }}
           animate={{ x: 0 }}
           transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-          className="flex-1 flex flex-col min-w-0 overflow-hidden absolute inset-0 md:relative"
+          className="md:hidden flex-1 flex flex-col min-w-0 overflow-hidden absolute inset-0"
         >
           <ChatView chatId={chatId} showBackButton={true} />
         </motion.div>
+      )}
+
+      {/* Desktop: Chat-Ansicht ohne Animation */}
+      {chatId ? (
+        <div className="hidden md:flex flex-1 flex-col min-w-0 overflow-hidden">
+          <ChatView chatId={chatId} showBackButton={false} />
+        </div>
       ) : (
         <div className="hidden md:flex flex-1 items-center justify-center text-muted-foreground">
           <div className="text-center">
