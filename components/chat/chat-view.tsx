@@ -61,9 +61,9 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background relative" data-chat-page>
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-3 flex-1 min-w-0">
           {/* Mobile: Zurück-Button */}
           {showBackButton && (
@@ -122,14 +122,16 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto py-4">
+      <div className="flex-1 overflow-y-auto py-4 pb-[180px] md:pb-4">
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
       </div>
 
-      {/* Input Area */}
-      <ChatInput onSend={handleSend} />
+      {/* Input Area - Sticky am unteren Rand auf Mobile */}
+      <div className="fixed md:relative bottom-16 md:bottom-0 left-0 right-0 md:left-auto md:right-auto z-40">
+        <ChatInput onSend={handleSend} />
+      </div>
     </div>
   )
 }

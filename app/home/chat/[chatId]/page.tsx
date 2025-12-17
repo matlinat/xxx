@@ -11,7 +11,7 @@ export default function ChatDetailPage() {
   const chatId = params.chatId as string
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
+    <div className="flex h-[calc(100vh-7rem)] md:h-[calc(100vh-3.5rem)] bg-background overflow-hidden">
       {/* Chat-Liste: nur auf Desktop sichtbar */}
       <div className="hidden md:flex md:w-96 md:max-w-96 border-r border-border flex-shrink-0 overflow-hidden">
         <ChatList selectedChatId={chatId} />

@@ -46,6 +46,7 @@ export default async function HomeLayout({ children }: { children: ReactNode }) 
         <main className="flex-1 pb-16 md:pb-0">
           {children}
         </main>
+        {/* Footer wird auf Chat-Seiten durch deren eigenes Layout überschrieben/weggelassen */}
         <HomeFooter />
         {/* Bottom Navigation: Nur auf Mobile, nicht für Creator */}
         {!isCreator && <BottomNav />}

@@ -1,10 +1,11 @@
 // components/home-footer.tsx
 import Link from "next/link"
 import { Mail, Phone } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-export function HomeFooter() {
+export function HomeFooter({ className }: { className?: string }) {
   return (
-    <footer className="w-full border-t bg-muted/30 py-12 md:py-16">
+    <footer className={cn("w-full border-t bg-muted/30 py-12 md:py-16", className)}>
       <div className="mx-auto w-full max-w-6xl px-4">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
