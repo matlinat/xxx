@@ -18,7 +18,6 @@ import {
   type Message,
 } from "./chat-utils"
 import { useRouter } from "next/navigation"
-import { motion, useMotionValue, useTransform, PanInfo } from "motion/react"
 
 interface ChatViewProps {
   chatId: string
@@ -27,32 +26,13 @@ interface ChatViewProps {
 
 export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const [messages, setMessages] = React.useState<Message[]>([])
-  const [isExiting, setIsExiting] = React.useState(false)
   const router = useRouter()
   const chats = generateDummyChats()
   const chat = chats.find((c) => c.id === chatId)
 
-  // Swipe-Back-Geste für Mobile
-  const x = useMotionValue(0)
-  const opacity = useTransform(x, [0, 150], [1, 0.3])
-
   const handleBack = () => {
-    // Animation starten
-    setIsExiting(true)
-    // Nach Animation zur Liste navigieren
-    setTimeout(() => {
-      router.push('/home/chat')
-    }, 300) // Match transition duration
-  }
-
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    // Nur auf Mobile (md:hidden)
-    if (window.innerWidth >= 768) return
-    
-    // Wenn nach rechts gewischt (>150px), zurück zur Liste
-    if (info.offset.x > 150) {
-      handleBack()
-    }
+    // Direkt zur Liste navigieren ohne Animation
+    router.push('/home/chat')
   }
 
   React.useEffect(() => {
@@ -81,17 +61,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   }
 
   return (
-    <motion.div 
-      className="flex flex-col h-full bg-background"
-      style={{ x: isExiting ? '100%' : x, opacity }}
-      animate={isExiting ? { x: '100%', opacity: 0 } : {}}
-      transition={isExiting ? { type: 'tween', duration: 0.3, ease: 'easeInOut' } : {}}
-      drag={showBackButton && !isExiting ? "x" : false}
-      dragConstraints={{ left: 0, right: 300 }}
-      dragElastic={{ left: 0, right: 0.2 }}
-      onDragEnd={handleDragEnd}
-      dragDirectionLock
-    >
+    <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -160,6 +130,6 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
 
       {/* Input Area */}
       <ChatInput onSend={handleSend} />
-    </motion.div>
+    </div>
   )
 }
