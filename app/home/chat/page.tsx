@@ -12,15 +12,15 @@ function ChatContent() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-background">
-      {/* Chat-Liste (linke Sidebar) */}
-      <div className="w-full md:w-96 border-r border-border flex-shrink-0">
+      {/* Chat-Liste: immer sichtbar auf Desktop, auf Mobile nur wenn kein Chat ausgewählt */}
+      <div className={`${chatId ? 'hidden md:flex' : 'flex'} w-full md:w-96 border-r border-border flex-shrink-0`}>
         <ChatList selectedChatId={chatId || null} />
       </div>
 
-      {/* Chat-Ansicht (rechte Seite) */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Chat-Ansicht: nur auf Desktop sichtbar wenn kein Chat ausgewählt */}
+      <div className={`${chatId ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 w-full md:w-auto`}>
         {chatId ? (
-          <ChatView chatId={chatId} />
+          <ChatView chatId={chatId} showBackButton={true} />
         ) : (
           <div className="flex-1 flex items-center justify-center text-muted-foreground">
             <div className="text-center">

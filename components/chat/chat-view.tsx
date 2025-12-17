@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Video, Phone, PhoneOff, MoreVertical } from "lucide-react"
+import { Video, Phone, PhoneOff, MoreVertical, ArrowLeft } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,13 +17,16 @@ import {
   generateDummyMessages,
   type Message,
 } from "./chat-utils"
+import { useRouter } from "next/navigation"
 
 interface ChatViewProps {
   chatId: string
+  showBackButton?: boolean
 }
 
-export function ChatView({ chatId }: ChatViewProps) {
+export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const [messages, setMessages] = React.useState<Message[]>([])
+  const router = useRouter()
   const chats = generateDummyChats()
   const chat = chats.find((c) => c.id === chatId)
 
@@ -56,8 +59,20 @@ export function ChatView({ chatId }: ChatViewProps) {
     <div className="flex flex-col h-full bg-background">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          {/* Mobile: Zurück-Button */}
+          {showBackButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/home/chat')}
+              className="md:hidden flex-shrink-0"
+            >
+              <ArrowLeft className="size-5" />
+            </Button>
+          )}
+          
+          <div className="relative flex-shrink-0">
             <Avatar className="size-10">
               {chat.participant.avatar ? (
                 <AvatarImage src={chat.participant.avatar} />
@@ -70,18 +85,18 @@ export function ChatView({ chatId }: ChatViewProps) {
               <div className="absolute bottom-0 right-0 size-3 bg-green-500 border-2 border-background rounded-full" />
             )}
           </div>
-          <div>
-            <h3 className="font-semibold">{chat.participant.name}</h3>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-semibold truncate">{chat.participant.name}</h3>
             <p className="text-xs text-green-500">Online</p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon">
+        <div className="flex items-center gap-1 md:gap-2 flex-shrink-0">
+          <Button variant="ghost" size="icon" className="hidden sm:flex">
             <Video className="size-5" />
           </Button>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hidden sm:flex">
             <PhoneOff className="size-5" />
           </Button>
           <DropdownMenu>
@@ -92,6 +107,8 @@ export function ChatView({ chatId }: ChatViewProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>Profil anzeigen</DropdownMenuItem>
+              <DropdownMenuItem className="sm:hidden">Video-Anruf</DropdownMenuItem>
+              <DropdownMenuItem className="sm:hidden">Anrufen</DropdownMenuItem>
               <DropdownMenuItem>Chat löschen</DropdownMenuItem>
               <DropdownMenuItem>Benachrichtigungen stummschalten</DropdownMenuItem>
             </DropdownMenuContent>
