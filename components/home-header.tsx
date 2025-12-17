@@ -24,6 +24,7 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 import { logoutAction } from "@/app/(auth)/actions"
 import { useTransition } from "react"
+import { ThemeSwitcher } from "@/components/ui/shadcn-io/theme-switcher"
 
 type UIUser = {
   name: string
@@ -105,6 +106,7 @@ export function HomeHeader({ user }: { user?: UIUser }) {
           >
             {searchOpen ? <X className="size-6" /> : <Search className="size-6" />}
           </Button>
+          <ThemeSwitcher />
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -146,6 +148,7 @@ export function HomeHeader({ user }: { user?: UIUser }) {
 
         {/* Desktop: Auth Buttons oder User Menu */}
         <div className="hidden md:flex items-center gap-2 ml-auto">
+          <ThemeSwitcher />
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 import { Menu } from "lucide-react"
+import { ThemeSwitcher } from "@/components/ui/shadcn-io/theme-switcher"
 
 const navItems = [
   { title: "Features", href: "#features" },
@@ -93,6 +94,7 @@ export function SiteHeader({ className }: { className?: string }) {
 
         {/* Action Buttons: immer sichtbar */}
         <div className="ml-auto flex items-center gap-2">
+          <ThemeSwitcher />
           <Button asChild size="sm" variant="default">
             <Link href="/signup">Get Started</Link>
           </Button>
@@ -132,6 +134,9 @@ export function SiteHeader({ className }: { className?: string }) {
                   )
                 )}
                 <div className="pt-2 space-y-2">
+                  <div className="flex justify-center pb-2">
+                    <ThemeSwitcher />
+                  </div>
                   <Button asChild className="w-full px-4">
                     <Link href="/signup">Get Started</Link>
                   </Button>
