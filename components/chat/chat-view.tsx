@@ -27,6 +27,7 @@ interface ChatViewProps {
 export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const [messages, setMessages] = React.useState<Message[]>([])
   const router = useRouter()
+  const messagesEndRef = React.useRef<HTMLDivElement>(null)
   const chats = generateDummyChats()
   const chat = chats.find((c) => c.id === chatId)
 
@@ -35,11 +36,21 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     router.push('/home/chat')
   }
 
+  // Auto-scroll zur neuesten Nachricht
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
   React.useEffect(() => {
     if (chatId) {
       setMessages(generateDummyMessages(chatId))
     }
   }, [chatId])
+
+  // Scroll beim Laden und bei neuen Nachrichten
+  React.useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   const handleSend = (messageText: string) => {
     const newMessage: Message = {
@@ -121,11 +132,14 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         </div>
       </div>
 
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto py-4 pb-[180px] md:pb-4">
+      {/* Messages Area - WhatsApp Style: neueste unten */}
+      <div className="flex-1 overflow-y-auto py-4 pb-[180px] md:pb-4 flex flex-col">
+        <div className="flex-1" />
         {messages.map((message) => (
           <ChatMessage key={message.id} message={message} />
         ))}
+        {/* Scroll-Anker für Auto-Scroll */}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area - Sticky am unteren Rand auf Mobile */}
