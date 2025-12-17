@@ -11,14 +11,14 @@ function ChatContent() {
   const chatId = searchParams.get("chatId")
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background">
+    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
       {/* Chat-Liste: immer sichtbar auf Desktop, auf Mobile nur wenn kein Chat ausgewählt */}
-      <div className={`${chatId ? 'hidden md:flex' : 'flex'} w-full md:w-96 border-r border-border flex-shrink-0`}>
+      <div className={`${chatId ? 'hidden md:flex' : 'flex'} w-full md:w-96 md:max-w-96 border-r border-border flex-shrink-0 overflow-hidden`}>
         <ChatList selectedChatId={chatId || null} />
       </div>
 
       {/* Chat-Ansicht: nur auf Desktop sichtbar wenn kein Chat ausgewählt */}
-      <div className={`${chatId ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 w-full md:w-auto`}>
+      <div className={`${chatId ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 overflow-hidden`}>
         {chatId ? (
           <ChatView chatId={chatId} showBackButton={true} />
         ) : (

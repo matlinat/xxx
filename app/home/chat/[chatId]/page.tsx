@@ -10,14 +10,14 @@ export default function ChatDetailPage() {
   const chatId = params.chatId as string
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background">
+    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
       {/* Chat-Liste: nur auf Desktop sichtbar */}
-      <div className="hidden md:flex md:w-96 border-r border-border flex-shrink-0">
+      <div className="hidden md:flex md:w-96 md:max-w-96 border-r border-border flex-shrink-0 overflow-hidden">
         <ChatList selectedChatId={chatId} />
       </div>
 
       {/* Chat-Ansicht: volle Breite auf Mobile, flex-1 auf Desktop */}
-      <div className="flex-1 flex flex-col min-w-0 w-full md:w-auto">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <ChatView chatId={chatId} showBackButton={true} />
       </div>
     </div>

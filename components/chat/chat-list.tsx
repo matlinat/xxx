@@ -29,9 +29,9 @@ export function ChatList({ selectedChatId }: ChatListProps) {
   )
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full w-full bg-background overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
         <h2 className="text-xl font-bold">Chats</h2>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Plus className="size-5" />
@@ -39,12 +39,12 @@ export function ChatList({ selectedChatId }: ChatListProps) {
       </div>
 
       {/* Search */}
-      <div className="p-4 border-b border-border">
+      <div className="p-4 border-b border-border flex-shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Chats search..."
+            placeholder="Chats durchsuchen..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
