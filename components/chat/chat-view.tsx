@@ -27,6 +27,7 @@ interface ChatViewProps {
 
 export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const [messages, setMessages] = React.useState<Message[]>([])
+  const [isExiting, setIsExiting] = React.useState(false)
   const router = useRouter()
   const chats = generateDummyChats()
   const chat = chats.find((c) => c.id === chatId)
@@ -35,13 +36,22 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const x = useMotionValue(0)
   const opacity = useTransform(x, [0, 150], [1, 0.3])
 
+  const handleBack = () => {
+    // Animation starten
+    setIsExiting(true)
+    // Nach Animation zur Liste navigieren
+    setTimeout(() => {
+      router.push('/home/chat')
+    }, 300) // Match transition duration
+  }
+
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     // Nur auf Mobile (md:hidden)
     if (window.innerWidth >= 768) return
     
     // Wenn nach rechts gewischt (>150px), zurück zur Liste
     if (info.offset.x > 150) {
-      router.push('/home/chat')
+      handleBack()
     }
   }
 
@@ -73,8 +83,10 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   return (
     <motion.div 
       className="flex flex-col h-full bg-background"
-      style={{ x, opacity }}
-      drag={showBackButton ? "x" : false}
+      style={{ x: isExiting ? '100%' : x, opacity }}
+      animate={isExiting ? { x: '100%', opacity: 0 } : {}}
+      transition={isExiting ? { type: 'tween', duration: 0.3, ease: 'easeInOut' } : {}}
+      drag={showBackButton && !isExiting ? "x" : false}
       dragConstraints={{ left: 0, right: 300 }}
       dragElastic={{ left: 0, right: 0.2 }}
       onDragEnd={handleDragEnd}
@@ -88,7 +100,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => router.push('/home/chat')}
+              onClick={handleBack}
               className="md:hidden flex-shrink-0"
             >
               <ArrowLeft className="size-5" />

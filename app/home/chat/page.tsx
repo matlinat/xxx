@@ -13,28 +13,28 @@ function ChatContent() {
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden relative">
-      {/* Chat-Liste: immer sichtbar auf Desktop, auf Mobile nur wenn kein Chat ausgewählt */}
+      {/* Mobile: Chat-Liste mit Animation */}
       <AnimatePresence mode="wait" initial={false}>
         {!chatId && (
           <motion.div
-            key="chat-list"
-            initial={{ x: 0, opacity: 1 }}
+            key="chat-list-mobile"
+            initial={{ x: '-100%', opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '-100%', opacity: 0 }}
             transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-            className="w-full md:w-96 md:max-w-96 border-r border-border flex-shrink-0 overflow-hidden md:relative absolute inset-0 md:translate-x-0"
+            className="md:hidden w-full border-r border-border flex-shrink-0 overflow-hidden absolute inset-0"
           >
             <ChatList selectedChatId={chatId || null} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Desktop: Chat-Liste statisch */}
+      {/* Desktop: Chat-Liste statisch (immer sichtbar) */}
       <div className="hidden md:flex md:w-96 md:max-w-96 border-r border-border flex-shrink-0 overflow-hidden">
         <ChatList selectedChatId={chatId || null} />
       </div>
 
-      {/* Chat-Ansicht mit Animation auf Mobile */}
+      {/* Chat-Ansicht mit Animation auf Mobile, statisch auf Desktop */}
       <AnimatePresence mode="wait" initial={false}>
         {chatId ? (
           <motion.div
@@ -43,7 +43,7 @@ function ChatContent() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: '100%', opacity: 0 }}
             transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
-            className="flex-1 flex flex-col min-w-0 overflow-hidden md:relative absolute inset-0 md:translate-x-0"
+            className="flex-1 flex flex-col min-w-0 overflow-hidden absolute inset-0 md:relative"
           >
             <ChatView chatId={chatId} showBackButton={true} />
           </motion.div>
