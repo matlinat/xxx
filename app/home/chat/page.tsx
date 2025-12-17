@@ -5,31 +5,64 @@ import { Suspense } from "react"
 import { ChatList } from "@/components/chat/chat-list"
 import { ChatView } from "@/components/chat/chat-view"
 import { useSearchParams } from "next/navigation"
+import { motion, AnimatePresence } from "motion/react"
 
 function ChatContent() {
   const searchParams = useSearchParams()
   const chatId = searchParams.get("chatId")
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden">
+    <div className="flex h-[calc(100vh-4rem)] bg-background overflow-hidden relative">
       {/* Chat-Liste: immer sichtbar auf Desktop, auf Mobile nur wenn kein Chat ausgewählt */}
-      <div className={`${chatId ? 'hidden md:flex' : 'flex'} w-full md:w-96 md:max-w-96 border-r border-border flex-shrink-0 overflow-hidden`}>
+      <AnimatePresence mode="wait" initial={false}>
+        {!chatId && (
+          <motion.div
+            key="chat-list"
+            initial={{ x: 0, opacity: 1 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '-100%', opacity: 0 }}
+            transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
+            className="w-full md:w-96 md:max-w-96 border-r border-border flex-shrink-0 overflow-hidden md:relative absolute inset-0 md:translate-x-0"
+          >
+            <ChatList selectedChatId={chatId || null} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Desktop: Chat-Liste statisch */}
+      <div className="hidden md:flex md:w-96 md:max-w-96 border-r border-border flex-shrink-0 overflow-hidden">
         <ChatList selectedChatId={chatId || null} />
       </div>
 
-      {/* Chat-Ansicht: nur auf Desktop sichtbar wenn kein Chat ausgewählt */}
-      <div className={`${chatId ? 'flex' : 'hidden md:flex'} flex-1 flex-col min-w-0 overflow-hidden`}>
+      {/* Chat-Ansicht mit Animation auf Mobile */}
+      <AnimatePresence mode="wait" initial={false}>
         {chatId ? (
-          <ChatView chatId={chatId} showBackButton={true} />
+          <motion.div
+            key={`chat-${chatId}`}
+            initial={{ x: '100%', opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '100%', opacity: 0 }}
+            transition={{ type: 'tween', duration: 0.3, ease: 'easeInOut' }}
+            className="flex-1 flex flex-col min-w-0 overflow-hidden md:relative absolute inset-0 md:translate-x-0"
+          >
+            <ChatView chatId={chatId} showBackButton={true} />
+          </motion.div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+          <motion.div
+            key="empty-state"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="hidden md:flex flex-1 items-center justify-center text-muted-foreground"
+          >
             <div className="text-center">
               <p className="text-lg font-medium mb-2">Kein Chat ausgewählt</p>
               <p className="text-sm">Wählen Sie einen Chat aus der Liste aus</p>
             </div>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
     </div>
   )
 }
