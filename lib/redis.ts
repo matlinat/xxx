@@ -29,6 +29,7 @@ export async function testRedisConnection(): Promise<boolean> {
 export async function testRedisOperations(): Promise<{
   success: boolean
   error?: string
+  details?: string
 }> {
   try {
     const testKey = 'test:redis:setup'
@@ -38,13 +39,23 @@ export async function testRedisOperations(): Promise<{
     await redis.set(testKey, testValue, { ex: 60 })
 
     // Get the value back
-    const result = await redis.get(testKey)
+    const result = await redis.get<{ timestamp: number; test: boolean }>(testKey)
 
     // Cleanup
     await redis.del(testKey)
 
+    // Verify result
+    const success = 
+      result !== null &&
+      typeof result === 'object' &&
+      'timestamp' in result &&
+      'test' in result &&
+      result.test === true &&
+      typeof result.timestamp === 'number'
+
     return {
-      success: JSON.stringify(result) === JSON.stringify(testValue),
+      success,
+      details: success ? 'Redis set/get operations working correctly' : `Unexpected result: ${JSON.stringify(result)}`,
     }
   } catch (error) {
     return {

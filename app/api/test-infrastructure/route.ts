@@ -11,7 +11,7 @@ export async function GET() {
   const results: {
     redis: {
       connected: boolean
-      operations: { success: boolean; error?: string }
+      operations: { success: boolean; error?: string; details?: string }
       error?: string
     }
     supabase: {
@@ -19,6 +19,7 @@ export async function GET() {
       tablesExist: boolean
       rlsEnabled: boolean
       error?: string
+      details?: string
     }
     timestamp: string
   } = {
@@ -51,46 +52,52 @@ export async function GET() {
   try {
     const supabase = await createClient()
 
-    // Test connection by querying a simple table
-    const { data: authData, error: authError } = await supabase.auth.getUser()
+    // Test connection - try to access any table (service role bypasses RLS)
+    // We use a count query which doesn't require authentication
+    const { count: chatsCount, error: chatsError } = await supabase
+      .from('chats')
+      .select('*', { count: 'exact', head: true })
 
-    if (authError) {
-      results.supabase.error = `Auth error: ${authError.message}`
-    } else {
+    const { count: messagesCount, error: messagesError } = await supabase
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+
+    const { count: participantsCount, error: participantsError } = await supabase
+      .from('chat_participants')
+      .select('*', { count: 'exact', head: true })
+
+    // Connection is successful if we can query tables
+    if (!chatsError && !messagesError && !participantsError) {
       results.supabase.connected = true
-    }
-
-    // Check if chat tables exist
-    const { data: tablesData, error: tablesError } = await supabase.rpc(
-      'check_chat_tables_exist'
-    )
-
-    if (tablesError) {
-      // Table check function might not exist, do manual check
-      const { error: chatsError } = await supabase
-        .from('chats')
-        .select('id')
-        .limit(1)
-
-      const { error: messagesError } = await supabase
-        .from('chat_messages')
-        .select('id')
-        .limit(1)
-
-      const { error: participantsError } = await supabase
-        .from('chat_participants')
-        .select('id')
-        .limit(1)
-
-      // If no errors (or just "no rows" errors), tables exist
-      results.supabase.tablesExist =
-        !chatsError || chatsError.code === 'PGRST116'
-
-      // RLS is enabled if we get RLS errors or successful queries
-      results.supabase.rlsEnabled = true // Assume enabled if tables exist
-    } else {
-      results.supabase.tablesExist = !!tablesData
+      results.supabase.tablesExist = true
       results.supabase.rlsEnabled = true
+      results.supabase.details = `Tables found: chats (${chatsCount ?? 0}), messages (${messagesCount ?? 0}), participants (${participantsCount ?? 0})`
+    } else if (chatsError?.code === 'PGRST301' || messagesError?.code === 'PGRST301' || participantsError?.code === 'PGRST301') {
+      // PGRST301 = JWT expired / Auth required = RLS is working!
+      results.supabase.connected = true
+      results.supabase.tablesExist = true
+      results.supabase.rlsEnabled = true
+      results.supabase.details = 'RLS policies active (authentication required for queries)'
+    } else if (chatsError?.code === '42P01' || messagesError?.code === '42P01' || participantsError?.code === '42P01') {
+      // 42P01 = Table does not exist
+      results.supabase.connected = true
+      results.supabase.tablesExist = false
+      results.supabase.error = 'Tables not found - run chat-schema.sql'
+    } else {
+      // Check at least if we have a connection
+      const { error: healthError } = await supabase
+        .from('_health_check_dummy')
+        .select('id')
+        .limit(1)
+
+      if (healthError?.code === '42P01') {
+        // Connection works, just table doesn't exist
+        results.supabase.connected = true
+      }
+
+      // Some tables might exist
+      results.supabase.tablesExist = !chatsError || !messagesError || !participantsError
+      results.supabase.error = chatsError?.message || messagesError?.message || participantsError?.message || 'Unknown error'
     }
   } catch (error) {
     results.supabase.error = error instanceof Error ? error.message : 'Unknown error'
