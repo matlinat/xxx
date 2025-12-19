@@ -156,6 +156,7 @@ export function generateDummyMessages(chatId: string): Message[] {
         content: "",
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
         read: true,
+        senderId: "dummy-sender-1",
         videoUrl: "/placeholder-video.jpg",
         videoDuration: "5:42",
       },
@@ -165,6 +166,7 @@ export function generateDummyMessages(chatId: string): Message[] {
         content: "",
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
         read: true,
+        senderId: "dummy-sender-1",
         images: [
           "/placeholder-image-1.jpg",
           "/placeholder-image-2.jpg",
@@ -182,6 +184,7 @@ export function generateDummyMessages(chatId: string): Message[] {
       content: "Hallo! Wie geht es dir?",
       timestamp: new Date(Date.now() - 60 * 60 * 1000),
       read: true,
+      senderId: "dummy-sender-1",
     },
     {
       id: "msg2",
@@ -189,6 +192,7 @@ export function generateDummyMessages(chatId: string): Message[] {
       content: "Ich hoffe, dir geht es gut!",
       timestamp: new Date(Date.now() - 30 * 60 * 1000),
       read: true,
+      senderId: "dummy-sender-1",
     },
   ]
 }
