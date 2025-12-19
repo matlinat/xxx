@@ -12,7 +12,7 @@ function ChatContent() {
   const chatId = searchParams.get("chatId")
 
   return (
-    <div className="flex h-[calc(100vh-7rem)] md:h-[calc(100vh-3.5rem)] bg-background overflow-hidden relative">
+    <div className="flex h-[calc(100vh-3.5rem)] bg-background overflow-hidden relative">
       {/* Mobile: Chat-Liste (ohne Exit-Animation) */}
       {!chatId && (
         <div className="md:hidden w-full border-r border-border flex-shrink-0 overflow-hidden absolute inset-0">
@@ -58,7 +58,7 @@ function ChatContent() {
 export default function ChatPage() {
   return (
     <Suspense fallback={
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+      <div className="flex h-[calc(100vh-3.5rem)] items-center justify-center">
         <p className="text-muted-foreground">Lade Chats...</p>
       </div>
     }>

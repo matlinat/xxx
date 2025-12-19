@@ -37,6 +37,7 @@ function convertToUIMessage(dbMessage: ChatMessageWithSender): Message {
     content: dbMessage.content || "",
     timestamp: new Date(dbMessage.created_at),
     read: !!dbMessage.read_at,
+    senderId: dbMessage.sender_id,
     videoUrl: dbMessage.message_type === "video" ? dbMessage.media_url || undefined : undefined,
     images: dbMessage.message_type === "image" && dbMessage.media_url ? [dbMessage.media_url] : undefined,
   }
@@ -268,18 +269,22 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       </div>
 
       {/* Messages Area - WhatsApp Style: neueste unten */}
-      <div className="flex-1 overflow-y-auto pb-[180px] md:pb-4">
+      <div className="flex-1 overflow-y-auto">
         <div className="min-h-full flex flex-col justify-end py-4">
           {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} />
+            <ChatMessage 
+              key={message.id} 
+              message={message} 
+              isOwnMessage={message.senderId === currentUserId}
+            />
           ))}
           {/* Scroll-Anker für Auto-Scroll */}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input Area - Sticky am unteren Rand auf Mobile */}
-      <div className="fixed md:relative bottom-16 md:bottom-0 left-0 right-0 md:left-auto md:right-auto z-40">
+      {/* Input Area - Sticky am unteren Rand */}
+      <div className="border-t border-border flex-shrink-0">
         <ChatInput onSend={handleSend} disabled={isSending} />
       </div>
     </div>

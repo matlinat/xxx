@@ -24,6 +24,7 @@ export interface Message {
   content: string
   timestamp: Date
   read: boolean
+  senderId: string
   videoUrl?: string
   videoDuration?: string
   images?: string[]
