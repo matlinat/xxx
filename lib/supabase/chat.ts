@@ -242,17 +242,7 @@ export async function getChatMessages(
 
   let query = supabase
     .from('chat_messages')
-    .select(
-      `
-      *,
-      sender:sender_id (
-        id:user_id,
-        name:display_name,
-        avatar_url,
-        username
-      )
-    `
-    )
+    .select('*')
     .eq('chat_id', chatId)
     .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
@@ -261,29 +251,50 @@ export async function getChatMessages(
     query = query.lt('created_at', beforeTimestamp)
   }
 
-  const { data, error } = await query
+  const { data: messages, error } = await query
 
   if (error) {
     console.error('Error fetching messages:', error)
     throw new Error('Fehler beim Laden der Nachrichten')
   }
 
-  if (!data) return []
+  if (!messages || messages.length === 0) return []
 
-  // Transform to match interface (Supabase returns nested sender object)
-  return data.map((msg: any) => ({
-    id: msg.id,
-    chat_id: msg.chat_id,
-    sender_id: msg.sender_id,
-    message_type: msg.message_type,
-    content: msg.content,
-    media_url: msg.media_url,
-    price: msg.price,
-    unlocked_by: msg.unlocked_by || [],
-    read_at: msg.read_at,
-    created_at: msg.created_at,
-    sender: Array.isArray(msg.sender) ? msg.sender[0] : msg.sender,
-  }))
+  // Get unique sender IDs
+  const senderIds = [...new Set(messages.map((m) => m.sender_id))]
+
+  // Fetch sender profiles separately
+  const { data: profiles, error: profilesError } = await supabase
+    .from('creator_profiles')
+    .select('user_id, display_name, avatar_url, username')
+    .in('user_id', senderIds)
+
+  if (profilesError) {
+    console.error('Error fetching sender profiles:', profilesError)
+  }
+
+  // Combine messages with sender info
+  return messages.map((msg) => {
+    const profile = profiles?.find((p) => p.user_id === msg.sender_id)
+    return {
+      id: msg.id,
+      chat_id: msg.chat_id,
+      sender_id: msg.sender_id,
+      message_type: msg.message_type,
+      content: msg.content,
+      media_url: msg.media_url,
+      price: msg.price,
+      unlocked_by: msg.unlocked_by || [],
+      read_at: msg.read_at,
+      created_at: msg.created_at,
+      sender: {
+        id: msg.sender_id,
+        name: profile?.display_name || 'Unknown User',
+        avatar_url: profile?.avatar_url || null,
+        username: profile?.username || null,
+      },
+    }
+  })
 }
 
 /**

@@ -9,6 +9,9 @@ const protectedRoutes: Record<string, string[]> = {
   '/home/subscriber': ['subscriber'],
 }
 
+// Public routes that don't require authentication
+const publicRoutes = ['/home', '/landing']
+
 export async function middleware(request: NextRequest) {
   const { supabase, response } = await createMiddlewareClient(request)
   const pathname = request.nextUrl.pathname
@@ -16,12 +19,20 @@ export async function middleware(request: NextRequest) {
   // Session abrufen
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Prüfen ob die Route geschützt ist
+  // Check if route requires authentication (all /home/* except public routes)
+  if (pathname.startsWith('/home') && !publicRoutes.includes(pathname)) {
+    if (!user) {
+      // Not logged in -> redirect to login
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+  }
+
+  // Prüfen ob die Route geschützt ist (role-based)
   for (const [route, allowedRoles] of Object.entries(protectedRoutes)) {
     if (pathname.startsWith(route)) {
-      // Nicht eingeloggt -> zur Home-Seite
+      // Nicht eingeloggt -> zur Login
       if (!user) {
-        return NextResponse.redirect(new URL('/home', request.url))
+        return NextResponse.redirect(new URL('/login', request.url))
       }
 
       // Rolle aus der users-Tabelle laden
@@ -48,9 +59,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Geschützte Bereiche
-    '/home/creator/:path*',
-    '/home/admin/:path*',
-    '/home/subscriber/:path*',
+    // Geschützte Bereiche - alle /home/* Routen
+    '/home/:path*',
   ],
 }
