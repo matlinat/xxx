@@ -22,6 +22,7 @@ import {
 } from "@/app/home/chat/actions"
 import { toast } from "sonner"
 import type { ChatMessageWithSender } from "@/lib/supabase/chat"
+import { useChatSubscription, type RealtimeMessage } from "@/hooks/use-chat-subscription"
 
 interface ChatViewProps {
   chatId: string
@@ -51,6 +52,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   } | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSending, setIsSending] = React.useState(false)
+  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null)
   const router = useRouter()
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
 
@@ -68,6 +70,14 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     async function loadChat() {
       setIsLoading(true)
       try {
+        // Get current user ID for realtime filtering
+        const { createClient } = await import("@/lib/supabase/client")
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          setCurrentUserId(user.id)
+        }
+
         // Load chat info
         const chatResult = await loadChatByIdAction(chatId)
         if (!chatResult.success || !chatResult.chat) {
@@ -104,6 +114,55 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       loadChat()
     }
   }, [chatId, router])
+
+  // Realtime subscription
+  const handleRealtimeMessage = React.useCallback(
+    async (realtimeMsg: RealtimeMessage) => {
+      // Don't add if it's our own message (already added optimistically)
+      if (realtimeMsg.sender_id === currentUserId) {
+        return
+      }
+
+      // Check if message already exists (prevent duplicates)
+      const exists = messages.some((m) => m.id === realtimeMsg.id)
+      if (exists) return
+
+      // Load sender profile
+      const { createClient } = await import("@/lib/supabase/client")
+      const supabase = createClient()
+      const { data: profile } = await supabase
+        .from("creator_profiles")
+        .select("user_id, display_name, avatar_url, username")
+        .eq("user_id", realtimeMsg.sender_id)
+        .single()
+
+      const messageWithSender: ChatMessageWithSender = {
+        ...realtimeMsg,
+        unlocked_by: [],
+        read_at: null,
+        price: null,
+        sender: {
+          id: realtimeMsg.sender_id,
+          name: profile?.display_name || "Unknown User",
+          avatar_url: profile?.avatar_url || null,
+          username: profile?.username || null,
+        },
+      }
+
+      const uiMessage = convertToUIMessage(messageWithSender)
+      setMessages((prev) => [...prev, uiMessage])
+
+      // Mark as read
+      await markAsReadAction(chatId)
+    },
+    [currentUserId, messages, chatId]
+  )
+
+  const { isConnected } = useChatSubscription({
+    chatId,
+    onMessage: handleRealtimeMessage,
+    enabled: !isLoading && !!currentUserId,
+  })
 
   // Scroll beim Laden und bei neuen Nachrichten
   React.useEffect(() => {
