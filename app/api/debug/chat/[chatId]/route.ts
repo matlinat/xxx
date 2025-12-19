@@ -9,11 +9,11 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { chatId: string } }
+  { params }: { params: Promise<{ chatId: string }> }
 ) {
   try {
     const supabase = await createClient()
-    const { chatId } = params
+    const { chatId } = await params
 
     // Get current user
     const {
