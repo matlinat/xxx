@@ -10,6 +10,7 @@ import {
   SidebarProvider,
   SidebarInset,
 } from "@/components/ui/sidebar"
+import { headers } from "next/headers"
 
 export default async function HomeLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
@@ -31,6 +32,11 @@ export default async function HomeLayout({ children }: { children: ReactNode }) 
 
   const isCreator = userRole === "creator"
 
+  // Check if we're on a chat page
+  const headersList = await headers()
+  const pathname = headersList.get("x-pathname") || ""
+  const isChatPage = pathname.startsWith("/home/chat")
+
   return (
     <SidebarProvider>
       {/* Sidebar: Auf Desktop immer, auf Mobile nur für Creator */}
@@ -46,9 +52,13 @@ export default async function HomeLayout({ children }: { children: ReactNode }) 
         <main className="flex-1">
           {children}
         </main>
-        <HomeFooter />
-        {/* Bottom Navigation: Nur auf Mobile, nicht für Creator */}
-        {!isCreator && <BottomNav />}
+        {/* Footer und BottomNav: Nicht auf Chat-Seiten */}
+        {!isChatPage && (
+          <>
+            <HomeFooter />
+            {!isCreator && <BottomNav />}
+          </>
+        )}
       </SidebarInset>
     </SidebarProvider>
   )

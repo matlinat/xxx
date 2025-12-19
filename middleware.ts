@@ -16,6 +16,9 @@ export async function middleware(request: NextRequest) {
   const { supabase, response } = await createMiddlewareClient(request)
   const pathname = request.nextUrl.pathname
 
+  // Add pathname to headers so it's available in layouts
+  response.headers.set('x-pathname', pathname)
+
   // Session abrufen
   const { data: { user } } = await supabase.auth.getUser()
 
