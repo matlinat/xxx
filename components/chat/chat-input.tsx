@@ -16,19 +16,20 @@ const EmojiPicker = dynamic(
 )
 
 interface ChatInputProps {
-  onSend: (message: string) => void
+  onSend: (message: string) => void | Promise<void>
   className?: string
+  disabled?: boolean
 }
 
-export function ChatInput({ onSend, className }: ChatInputProps) {
+export function ChatInput({ onSend, className, disabled = false }: ChatInputProps) {
   const [message, setMessage] = React.useState("")
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
   const [attachedFile, setAttachedFile] = React.useState<string | null>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
 
-  const handleSend = () => {
-    if (message.trim() || attachedFile) {
-      onSend(message)
+  const handleSend = async () => {
+    if ((message.trim() || attachedFile) && !disabled) {
+      await onSend(message)
       setMessage("")
       setAttachedFile(null)
       setShowEmojiPicker(false)
@@ -133,7 +134,7 @@ export function ChatInput({ onSend, className }: ChatInputProps) {
         <Button
           type="button"
           onClick={handleSend}
-          disabled={!message.trim() && !attachedFile}
+          disabled={disabled || (!message.trim() && !attachedFile)}
           size="icon"
           className="bg-primary hover:bg-primary/90"
         >

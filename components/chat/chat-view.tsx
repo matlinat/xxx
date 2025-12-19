@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Video, Phone, PhoneOff, MoreVertical, ArrowLeft } from "lucide-react"
+import { Video, Phone, PhoneOff, MoreVertical, ArrowLeft, Loader2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -12,27 +12,49 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChatMessage } from "./chat-message"
 import { ChatInput } from "./chat-input"
-import {
-  generateDummyChats,
-  generateDummyMessages,
-  type Message,
-} from "./chat-utils"
+import { type Message, getInitials } from "./chat-utils"
 import { useRouter } from "next/navigation"
+import {
+  loadChatByIdAction,
+  loadChatHistoryAction,
+  sendTextMessageAction,
+  markAsReadAction,
+} from "@/app/home/chat/actions"
+import { toast } from "sonner"
+import type { ChatMessageWithSender } from "@/lib/supabase/chat"
 
 interface ChatViewProps {
   chatId: string
   showBackButton?: boolean
 }
 
+// Convert DB message to UI message format
+function convertToUIMessage(dbMessage: ChatMessageWithSender): Message {
+  return {
+    id: dbMessage.id,
+    type: dbMessage.message_type as "text" | "video" | "image_gallery",
+    content: dbMessage.content || "",
+    timestamp: new Date(dbMessage.created_at),
+    read: !!dbMessage.read_at,
+    videoUrl: dbMessage.message_type === "video" ? dbMessage.media_url || undefined : undefined,
+    images: dbMessage.message_type === "image" && dbMessage.media_url ? [dbMessage.media_url] : undefined,
+  }
+}
+
 export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const [messages, setMessages] = React.useState<Message[]>([])
+  const [chatInfo, setChatInfo] = React.useState<{
+    id: string
+    name: string
+    avatar: string | null
+    username: string | null
+  } | null>(null)
+  const [isLoading, setIsLoading] = React.useState(true)
+  const [isSending, setIsSending] = React.useState(false)
   const router = useRouter()
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
-  const chats = generateDummyChats()
-  const chat = chats.find((c) => c.id === chatId)
 
   const handleBack = () => {
-    // Direkt zur Liste navigieren ohne Animation
     router.push('/home/chat')
   }
 
@@ -41,29 +63,84 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
+  // Load chat info and messages
   React.useEffect(() => {
-    if (chatId) {
-      setMessages(generateDummyMessages(chatId))
+    async function loadChat() {
+      setIsLoading(true)
+      try {
+        // Load chat info
+        const chatResult = await loadChatByIdAction(chatId)
+        if (!chatResult.success || !chatResult.chat) {
+          toast.error(chatResult.error || "Chat nicht gefunden")
+          router.push('/home/chat')
+          return
+        }
+
+        setChatInfo({
+          id: chatResult.chat.otherUser.id,
+          name: chatResult.chat.otherUser.name,
+          avatar: chatResult.chat.otherUser.avatar_url,
+          username: chatResult.chat.otherUser.username,
+        })
+
+        // Load messages
+        const messagesResult = await loadChatHistoryAction(chatId)
+        if (messagesResult.success && messagesResult.messages) {
+          const uiMessages = messagesResult.messages.map(convertToUIMessage)
+          setMessages(uiMessages)
+        }
+
+        // Mark as read
+        await markAsReadAction(chatId)
+      } catch (error) {
+        console.error("Error loading chat:", error)
+        toast.error("Fehler beim Laden des Chats")
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [chatId])
+
+    if (chatId) {
+      loadChat()
+    }
+  }, [chatId, router])
 
   // Scroll beim Laden und bei neuen Nachrichten
   React.useEffect(() => {
     scrollToBottom()
   }, [messages])
 
-  const handleSend = (messageText: string) => {
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      type: "text",
-      content: messageText,
-      timestamp: new Date(),
-      read: false,
+  const handleSend = async (messageText: string) => {
+    if (!messageText.trim() || isSending) return
+
+    setIsSending(true)
+    try {
+      const result = await sendTextMessageAction(chatId, messageText)
+
+      if (result.success && result.message) {
+        // Add message to UI (optimistic update)
+        const newMessage = convertToUIMessage(result.message)
+        setMessages((prev) => [...prev, newMessage])
+      } else {
+        toast.error(result.error || "Fehler beim Senden")
+      }
+    } catch (error) {
+      console.error("Error sending message:", error)
+      toast.error("Fehler beim Senden der Nachricht")
+    } finally {
+      setIsSending(false)
     }
-    setMessages((prev) => [...prev, newMessage])
   }
 
-  if (!chat) {
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (!chatInfo) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
         <p>Chat nicht gefunden</p>
@@ -90,20 +167,19 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
           
           <div className="relative flex-shrink-0">
             <Avatar className="size-10">
-              {chat.participant.avatar ? (
-                <AvatarImage src={chat.participant.avatar} />
+              {chatInfo.avatar ? (
+                <AvatarImage src={chatInfo.avatar} />
               ) : null}
               <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                {chat.participant.initials}
+                {getInitials(chatInfo.name)}
               </AvatarFallback>
             </Avatar>
-            {chat.participant.online && (
-              <div className="absolute bottom-0 right-0 size-3 bg-green-500 border-2 border-background rounded-full" />
-            )}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-semibold truncate">{chat.participant.name}</h3>
-            <p className="text-xs text-green-500">Online</p>
+            <h3 className="font-semibold truncate">{chatInfo.name}</h3>
+            {chatInfo.username && (
+              <p className="text-xs text-muted-foreground">@{chatInfo.username}</p>
+            )}
           </div>
         </div>
 
@@ -145,7 +221,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
 
       {/* Input Area - Sticky am unteren Rand auf Mobile */}
       <div className="fixed md:relative bottom-16 md:bottom-0 left-0 right-0 md:left-auto md:right-auto z-40">
-        <ChatInput onSend={handleSend} />
+        <ChatInput onSend={handleSend} disabled={isSending} />
       </div>
     </div>
   )
