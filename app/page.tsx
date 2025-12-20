@@ -6,4 +6,4 @@ export default async function RootPage() {
   // Alle User zur Home-Seite weiterleiten
   redirect("/home")
 }
-
+ 
