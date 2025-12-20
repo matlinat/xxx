@@ -101,6 +101,48 @@ export function getTypingChannel(chatId: string): string {
   return `chat:${chatId}:typing`
 }
 
+/**
+ * Publish a typing event
+ * Sets a key that expires after 3 seconds
+ */
+export async function publishTypingEvent(
+  chatId: string,
+  userId: string,
+  userName: string
+): Promise<void> {
+  const key = `typing:${chatId}:${userId}`
+  await redis.set(key, userName, { ex: 3 }) // Expires after 3 seconds
+}
+
+/**
+ * Get all users currently typing in a chat
+ */
+export async function getTypingUsers(
+  chatId: string,
+  currentUserId: string
+): Promise<string[]> {
+  const pattern = `typing:${chatId}:*`
+  const keys = await redis.keys(pattern)
+  
+  const typingUsers: string[] = []
+  
+  for (const key of keys) {
+    // Extract userId from key
+    const userId = key.split(':')[2]
+    
+    // Don't include current user
+    if (userId === currentUserId) continue
+    
+    // Get userName
+    const userName = await redis.get<string>(key)
+    if (userName) {
+      typingUsers.push(userName)
+    }
+  }
+  
+  return typingUsers
+}
+
 // ============================================
 // RATE LIMITING (Basic - will be enhanced later)
 // ============================================

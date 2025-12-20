@@ -17,24 +17,62 @@ const EmojiPicker = dynamic(
 
 interface ChatInputProps {
   onSend: (message: string) => void | Promise<void>
+  onTyping?: () => void
   className?: string
   disabled?: boolean
 }
 
-export function ChatInput({ onSend, className, disabled = false }: ChatInputProps) {
+export function ChatInput({ onSend, onTyping, className, disabled = false }: ChatInputProps) {
   const [message, setMessage] = React.useState("")
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
   const [attachedFile, setAttachedFile] = React.useState<string | null>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const typingTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   const handleSend = async () => {
     if ((message.trim() || attachedFile) && !disabled) {
+      // Clear typing timeout on send
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+        typingTimeoutRef.current = null
+      }
+      
       await onSend(message)
       setMessage("")
       setAttachedFile(null)
       setShowEmojiPicker(false)
     }
   }
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMessage = e.target.value
+    setMessage(newMessage)
+
+    // Send typing event with debounce
+    if (onTyping && newMessage.trim()) {
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+
+      // Send typing event
+      onTyping()
+
+      // Set new timeout to stop sending if user stops typing
+      typingTimeoutRef.current = setTimeout(() => {
+        typingTimeoutRef.current = null
+      }, 3000)
+    }
+  }
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -125,7 +163,7 @@ export function ChatInput({ onSend, className, disabled = false }: ChatInputProp
           type="text"
           placeholder="Enter message..."
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleMessageChange}
           onKeyPress={handleKeyPress}
           className="flex-1"
         />

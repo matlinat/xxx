@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner"
 import type { ChatMessageWithSender } from "@/lib/supabase/chat"
 import { useChatSubscription, type RealtimeMessage } from "@/hooks/use-chat-subscription"
+import { useTypingIndicator } from "@/hooks/use-typing-indicator"
 
 interface ChatViewProps {
   chatId: string
@@ -173,6 +174,11 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     enabled: !isLoading && !!currentUserId,
   })
 
+  const { typingUsers, sendTypingEvent } = useTypingIndicator({
+    chatId,
+    enabled: !isLoading && !!currentUserId,
+  })
+
   // Scroll beim Laden und bei neuen Nachrichten
   React.useEffect(() => {
     scrollToBottom()
@@ -197,7 +203,27 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
 
         toast.success("Nachricht gesendet (1 Credit abgezogen)")
       } else {
-        toast.error(result.error || "Fehler beim Senden")
+        // Check if it's a rate limit error
+        if (result.rateLimitReset) {
+          const resetDate = new Date(result.rateLimitReset)
+          const now = new Date()
+          const secondsUntilReset = Math.ceil((resetDate.getTime() - now.getTime()) / 1000)
+          
+          if (secondsUntilReset > 60) {
+            const minutesUntilReset = Math.ceil(secondsUntilReset / 60)
+            toast.error(
+              `${result.error} Versuche es in ${minutesUntilReset} Minute${minutesUntilReset > 1 ? 'n' : ''} erneut.`,
+              { duration: 5000 }
+            )
+          } else {
+            toast.error(
+              `${result.error} Versuche es in ${secondsUntilReset} Sekunde${secondsUntilReset > 1 ? 'n' : ''} erneut.`,
+              { duration: 5000 }
+            )
+          }
+        } else {
+          toast.error(result.error || "Fehler beim Senden")
+        }
       }
     } catch (error) {
       console.error("Error sending message:", error)
@@ -303,6 +329,25 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
               isOwnMessage={message.senderId === currentUserId}
             />
           ))}
+          
+          {/* Typing Indicator */}
+          {typingUsers.length > 0 && (
+            <div className="px-4 mb-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex gap-1">
+                  <span className="animate-bounce" style={{ animationDelay: '0ms' }}>●</span>
+                  <span className="animate-bounce" style={{ animationDelay: '150ms' }}>●</span>
+                  <span className="animate-bounce" style={{ animationDelay: '300ms' }}>●</span>
+                </div>
+                <span>
+                  {typingUsers.length === 1
+                    ? `${typingUsers[0]} schreibt...`
+                    : `${typingUsers.length} Personen schreiben...`}
+                </span>
+              </div>
+            </div>
+          )}
+          
           {/* Scroll-Anker für Auto-Scroll */}
           <div ref={messagesEndRef} />
         </div>
@@ -310,7 +355,11 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
 
       {/* Input Area - Sticky am unteren Rand */}
       <div className="border-t border-border flex-shrink-0">
-        <ChatInput onSend={handleSend} disabled={isSending} />
+        <ChatInput 
+          onSend={handleSend} 
+          onTyping={sendTypingEvent}
+          disabled={isSending} 
+        />
       </div>
     </div>
   )

@@ -17,6 +17,7 @@ import {
   getWalletBalance,
   createExpenseTransaction,
 } from '@/lib/supabase/wallet'
+import { checkRateLimit } from '@/lib/redis'
 
 // Message costs in credits
 const MESSAGE_COSTS = {
@@ -24,6 +25,12 @@ const MESSAGE_COSTS = {
   image: 2,
   video: 5,
   paid_media: 0, // Paid by receiver
+} as const
+
+// Rate limit configuration
+const RATE_LIMITS = {
+  messages_per_minute: 10,
+  messages_per_hour: 100,
 } as const
 
 // ============================================
@@ -274,6 +281,7 @@ export async function sendTextMessageAction(
   message?: ChatMessageWithSender
   newBalance?: number
   error?: string
+  rateLimitReset?: string
 }> {
   try {
     const supabase = await createClient()
@@ -299,6 +307,42 @@ export async function sendTextMessageAction(
     const hasAccess = await verifyUserInChat(chatId, user.id)
     if (!hasAccess) {
       return { success: false, error: 'Kein Zugriff auf diesen Chat' }
+    }
+
+    // ============================================
+    // RATE LIMITING
+    // ============================================
+    
+    // Check minute limit
+    const minuteLimit = await checkRateLimit(
+      user.id,
+      'chat:send:minute',
+      RATE_LIMITS.messages_per_minute,
+      60
+    )
+
+    if (!minuteLimit.allowed) {
+      return {
+        success: false,
+        error: `Rate-Limit erreicht. Du kannst nur ${RATE_LIMITS.messages_per_minute} Nachrichten pro Minute senden.`,
+        rateLimitReset: minuteLimit.resetAt.toISOString(),
+      }
+    }
+
+    // Check hourly limit
+    const hourLimit = await checkRateLimit(
+      user.id,
+      'chat:send:hour',
+      RATE_LIMITS.messages_per_hour,
+      3600
+    )
+
+    if (!hourLimit.allowed) {
+      return {
+        success: false,
+        error: `Stündliches Rate-Limit erreicht. Du kannst nur ${RATE_LIMITS.messages_per_hour} Nachrichten pro Stunde senden.`,
+        rateLimitReset: hourLimit.resetAt.toISOString(),
+      }
     }
 
     // ============================================
