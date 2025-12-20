@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Video, Phone, PhoneOff, MoreVertical, ArrowLeft, Loader2 } from "lucide-react"
+import { Video, Phone, PhoneOff, MoreVertical, ArrowLeft, Loader2, Coins } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +19,7 @@ import {
   loadChatHistoryAction,
   sendTextMessageAction,
   markAsReadAction,
+  getWalletBalanceAction,
 } from "@/app/home/chat/actions"
 import { toast } from "sonner"
 import type { ChatMessageWithSender } from "@/lib/supabase/chat"
@@ -54,6 +55,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSending, setIsSending] = React.useState(false)
   const [currentUserId, setCurrentUserId] = React.useState<string | null>(null)
+  const [walletBalance, setWalletBalance] = React.useState<number | null>(null)
   const router = useRouter()
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
 
@@ -103,6 +105,12 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
 
         // Mark as read
         await markAsReadAction(chatId)
+
+        // Load wallet balance
+        const balanceResult = await getWalletBalanceAction()
+        if (balanceResult.success && balanceResult.balance !== undefined) {
+          setWalletBalance(balanceResult.balance)
+        }
       } catch (error) {
         console.error("Error loading chat:", error)
         toast.error("Fehler beim Laden des Chats")
@@ -181,6 +189,13 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         // Add message to UI (optimistic update)
         const newMessage = convertToUIMessage(result.message)
         setMessages((prev) => [...prev, newMessage])
+
+        // Update balance
+        if (result.newBalance !== undefined) {
+          setWalletBalance(result.newBalance)
+        }
+
+        toast.success("Nachricht gesendet (1 Credit abgezogen)")
       } else {
         toast.error(result.error || "Fehler beim Senden")
       }
@@ -241,6 +256,16 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
               <p className="text-xs text-muted-foreground">@{chatInfo.username}</p>
             )}
           </div>
+
+          {/* Wallet Balance */}
+          {walletBalance !== null && (
+            <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 rounded-full">
+              <Coins className="size-4 text-primary" />
+              <span className="text-sm font-medium text-primary">
+                {walletBalance.toFixed(2)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

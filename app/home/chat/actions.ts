@@ -13,6 +13,56 @@ import {
   type ChatWithParticipant,
   type ChatMessageWithSender,
 } from '@/lib/supabase/chat'
+import {
+  getWalletBalance,
+  createExpenseTransaction,
+} from '@/lib/supabase/wallet'
+
+// Message costs in credits
+const MESSAGE_COSTS = {
+  text: 1,
+  image: 2,
+  video: 5,
+  paid_media: 0, // Paid by receiver
+} as const
+
+// ============================================
+// WALLET OPERATIONS
+// ============================================
+
+/**
+ * Get current wallet balance
+ */
+export async function getWalletBalanceAction(): Promise<{
+  success: boolean
+  balance?: number
+  error?: string
+}> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    const walletBalance = await getWalletBalance(user.id)
+
+    return {
+      success: true,
+      balance: walletBalance.balance,
+    }
+  } catch (error) {
+    console.error('Error in getWalletBalanceAction:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+    }
+  }
+}
 
 // ============================================
 // CHAT MANAGEMENT
@@ -214,8 +264,7 @@ export async function loadChatHistoryAction(
 }
 
 /**
- * Send a text message (basic version without credits)
- * NOTE: Credits will be added in Step 4
+ * Send a text message with credit deduction
  */
 export async function sendTextMessageAction(
   chatId: string,
@@ -223,6 +272,7 @@ export async function sendTextMessageAction(
 ): Promise<{
   success: boolean
   message?: ChatMessageWithSender
+  newBalance?: number
   error?: string
 }> {
   try {
@@ -251,29 +301,62 @@ export async function sendTextMessageAction(
       return { success: false, error: 'Kein Zugriff auf diesen Chat' }
     }
 
-    // Insert message
-    const message = await insertMessage(chatId, user.id, 'text', content.trim())
-
-    // Get sender info
-    const { data: senderProfile } = await supabase
-      .from('creator_profiles')
-      .select('user_id, display_name, avatar_url, username')
-      .eq('user_id', user.id)
-      .single()
-
-    const messageWithSender: ChatMessageWithSender = {
-      ...message,
-      sender: {
-        id: user.id,
-        name: senderProfile?.display_name || 'Unknown',
-        avatar_url: senderProfile?.avatar_url || null,
-        username: senderProfile?.username || null,
-      },
+    // ============================================
+    // CREDIT CHECK & DEDUCTION
+    // ============================================
+    
+    const messageCost = MESSAGE_COSTS.text
+    
+    // Check balance
+    const balance = await getWalletBalance(user.id)
+    if (balance.balance < messageCost) {
+      return {
+        success: false,
+        error: `Nicht genügend Credits. Benötigt: ${messageCost}, Verfügbar: ${balance.balance.toFixed(2)}`,
+      }
     }
 
-    return {
-      success: true,
-      message: messageWithSender,
+    // Deduct credits
+    try {
+      const { newBalance } = await createExpenseTransaction(
+        user.id,
+        messageCost,
+        'Chat-Nachricht gesendet',
+        'chat_message',
+        chatId
+      )
+
+      // Insert message after successful payment
+      const message = await insertMessage(chatId, user.id, 'text', content.trim())
+
+      // Get sender info
+      const { data: senderProfile } = await supabase
+        .from('creator_profiles')
+        .select('user_id, display_name, avatar_url, username')
+        .eq('user_id', user.id)
+        .single()
+
+      const messageWithSender: ChatMessageWithSender = {
+        ...message,
+        sender: {
+          id: user.id,
+          name: senderProfile?.display_name || 'Unknown',
+          avatar_url: senderProfile?.avatar_url || null,
+          username: senderProfile?.username || null,
+        },
+      }
+
+      return {
+        success: true,
+        message: messageWithSender,
+        newBalance,
+      }
+    } catch (creditError) {
+      console.error('Credit deduction failed:', creditError)
+      return {
+        success: false,
+        error: 'Fehler beim Abbuchen der Credits',
+      }
     }
   } catch (error) {
     console.error('Error in sendTextMessageAction:', error)
