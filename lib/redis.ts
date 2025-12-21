@@ -114,13 +114,17 @@ export async function publishTypingEvent(
   const now = Date.now()
   const expiresAt = now + 3000 // 3 seconds from now
   
+  console.log('[Redis] 📤 Publishing typing event:', { hashKey, userId, userName, expiresAt })
+  
   // Store as JSON with expiry timestamp
-  await redis.hset(hashKey, {
+  const hsetResult = await redis.hset(hashKey, {
     [userId]: JSON.stringify({ userName, expiresAt }),
   })
+  console.log('[Redis] ✅ HSET result:', hsetResult)
   
   // Set expiry on the hash itself (10 seconds to allow for cleanup)
-  await redis.expire(hashKey, 10)
+  const expireResult = await redis.expire(hashKey, 10)
+  console.log('[Redis] ✅ EXPIRE result:', expireResult)
 }
 
 /**
@@ -135,42 +139,57 @@ export async function getTypingUsers(
     const hashKey = `typing:${chatId}`
     const now = Date.now()
     
+    console.log('[Redis] 📥 Getting typing users:', { hashKey, currentUserId, now })
+    
     // Get all typing users from hash
     const typingData = await redis.hgetall<Record<string, string>>(hashKey)
+    console.log('[Redis] 📊 Raw typing data:', typingData)
     
-    if (!typingData) return []
+    if (!typingData) {
+      console.log('[Redis] ℹ️ No typing data found')
+      return []
+    }
     
     const typingUsers: string[] = []
     const expiredKeys: string[] = []
     
     for (const [userId, dataStr] of Object.entries(typingData)) {
       // Skip current user
-      if (userId === currentUserId) continue
+      if (userId === currentUserId) {
+        console.log('[Redis] ⏭️ Skipping current user:', userId)
+        continue
+      }
       
       try {
         const data = JSON.parse(dataStr)
+        console.log('[Redis] 📝 Parsed data for user', userId, ':', data)
         
         // Check if expired
         if (data.expiresAt < now) {
+          console.log('[Redis] ⏰ User expired:', userId, 'expiresAt:', data.expiresAt, 'now:', now)
           expiredKeys.push(userId)
           continue
         }
         
+        console.log('[Redis] ✅ Active typing user:', data.userName)
         typingUsers.push(data.userName)
       } catch (error) {
         // Invalid JSON, mark for cleanup
+        console.log('[Redis] ❌ Invalid JSON for user:', userId, error)
         expiredKeys.push(userId)
       }
     }
     
     // Cleanup expired entries
     if (expiredKeys.length > 0) {
+      console.log('[Redis] 🧹 Cleaning up expired keys:', expiredKeys)
       await redis.hdel(hashKey, ...expiredKeys)
     }
     
+    console.log('[Redis] ✅ Final typing users:', typingUsers)
     return typingUsers
   } catch (error) {
-    console.error('Error getting typing users:', error)
+    console.error('[Redis] ❌ Error getting typing users:', error)
     return []
   }
 }
