@@ -338,7 +338,6 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
           {/* Typing Indicator */}
           {typingUsers.length > 0 && (
             <div className="px-4 mb-2">
-              {console.log('[ChatView] 🎨 Rendering typing indicator for:', typingUsers)}
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="flex gap-1">
                   <span className="animate-bounce" style={{ animationDelay: '0ms' }}>●</span>
