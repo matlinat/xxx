@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChatMessage } from "./chat-message"
 import { ChatInput } from "./chat-input"
+import { CacheDebugPanel } from "./cache-debug-panel"
 import { type Message, type MessageStatus, getInitials } from "./chat-utils"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
@@ -33,8 +34,15 @@ import {
   logCacheMetrics,
   type CacheMetrics
 } from "@/lib/indexeddb/chat-cache"
-// Initialize background sync
+// Initialize background sync (runs automatically on import)
 import "@/lib/indexeddb/background-sync"
+
+// Initialize debug tools in development (runs automatically on import)
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  import("@/lib/indexeddb/debug-cache").then(() => {
+    console.log('[DEBUG] 🐛 Debug tools loaded')
+  })
+}
 
 interface ChatViewProps {
   chatId: string
@@ -435,6 +443,9 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
 
   return (
     <div className="flex flex-col h-full bg-background relative" data-chat-page>
+      {/* Debug Panel (only in development) */}
+      <CacheDebugPanel chatId={chatId} />
+      
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-3 flex-1 min-w-0">

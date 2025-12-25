@@ -24,6 +24,8 @@ class ChatDatabase extends Dexie {
   constructor() {
     super('ChatCache')
     
+    console.log('[CACHE DB] 🗄️ Initializing ChatCache database...')
+    
     // Version 1: Initial schema
     this.version(1).stores({
       // Indexes for efficient queries
@@ -32,9 +34,34 @@ class ChatDatabase extends Dexie {
       messages: 'id, chatId, sender_id, [chatId+created_at], cachedAt',
       chats: 'chatId'
     })
+    
+    // Log when database is opened
+    this.on('ready', () => {
+      console.log('[CACHE DB] ✅ Database ready')
+    })
+    
+    // Log errors
+    this.on('blocked', () => {
+      console.warn('[CACHE DB] ⚠️ Database blocked - close other tabs')
+    })
+    
+    this.on('versionchange', () => {
+      console.log('[CACHE DB] 🔄 Database version changed')
+    })
   }
 }
 
 // Singleton instance
 export const chatDB = new ChatDatabase()
+
+// Test database on init (only in browser)
+if (typeof window !== 'undefined') {
+  chatDB.open().then(() => {
+    console.log('[CACHE DB] ✅ Database opened successfully')
+    console.log('[CACHE DB] 📊 Version:', chatDB.verno)
+    console.log('[CACHE DB] 📋 Tables:', chatDB.tables.map(t => t.name))
+  }).catch(error => {
+    console.error('[CACHE DB] ❌ Failed to open database:', error)
+  })
+}
 

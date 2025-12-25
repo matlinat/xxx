@@ -12,16 +12,23 @@ export async function getCachedMessages(
   chatId: string,
   limit = 50
 ): Promise<CachedMessage[]> {
+  console.log(`[CACHE] 📖 Loading messages from cache for chat ${chatId}`)
+  
   // Filter by chatId (using index), then sort in memory
   // This is efficient for typical chat sizes (50-1000 messages)
   const allMessages = await chatDB.messages
     .where('chatId').equals(chatId)
     .toArray()
   
+  console.log(`[CACHE] 📊 Found ${allMessages.length} messages in cache`)
+  
   // Sort by created_at descending (newest first) and limit
-  return allMessages
+  const result = allMessages
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, limit)
+  
+  console.log(`[CACHE] ✅ Returning ${result.length} messages (limit: ${limit})`)
+  return result
 }
 
 /**
@@ -31,6 +38,8 @@ export async function cacheMessages(
   chatId: string,
   messages: ChatMessageWithSender[]
 ): Promise<void> {
+  console.log(`[CACHE] 💾 Saving ${messages.length} messages for chat ${chatId}`)
+  
   await chatDB.transaction('rw', chatDB.messages, chatDB.chats, async () => {
     // Batch insert with chatId
     const cachedMessages = messages.map(msg => ({
@@ -40,6 +49,7 @@ export async function cacheMessages(
     }))
     
     await chatDB.messages.bulkPut(cachedMessages)
+    console.log(`[CACHE] ✅ Saved ${cachedMessages.length} messages to IndexedDB`)
     
     // Update chat metadata - find most recent message
     const sortedMessages = [...messages].sort((a, b) => 
@@ -47,14 +57,17 @@ export async function cacheMessages(
     )
     const lastMessage = sortedMessages[0] // Most recent
     
-    await chatDB.chats.put({
+    const metadata = {
       chatId,
       lastSyncAt: Date.now(),
       lastMessageId: lastMessage?.id || null,
       lastMessageTimestamp: lastMessage?.created_at || null,
       messageCount: messages.length,
       version: 1
-    })
+    }
+    
+    await chatDB.chats.put(metadata)
+    console.log(`[CACHE] 📊 Updated metadata:`, metadata)
   })
 }
 
@@ -281,9 +294,13 @@ export async function getCachedMessagesSafe(
   limit = 50
 ): Promise<CachedMessage[]> {
   try {
-    return await getCachedMessages(chatId, limit)
+    console.log(`[CACHE] 🔄 getCachedMessagesSafe called for chat ${chatId}`)
+    const result = await getCachedMessages(chatId, limit)
+    console.log(`[CACHE] ✅ getCachedMessagesSafe returned ${result.length} messages`)
+    return result
   } catch (error) {
-    console.error('[Cache] Error loading from cache:', error)
+    console.error('[CACHE] ❌ Error loading from cache:', error)
+    console.error('[CACHE] Stack trace:', error instanceof Error ? error.stack : 'No stack trace')
     // Fallback to empty array, will fetch from server
     return []
   }
@@ -297,9 +314,12 @@ export async function cacheMessagesSafe(
   messages: ChatMessageWithSender[]
 ): Promise<void> {
   try {
+    console.log(`[CACHE] 🔄 cacheMessagesSafe called with ${messages.length} messages`)
     await cacheMessages(chatId, messages)
+    console.log(`[CACHE] ✅ cacheMessagesSafe completed successfully`)
   } catch (error) {
-    console.error('[Cache] Error caching messages:', error)
+    console.error('[CACHE] ❌ Error caching messages:', error)
+    console.error('[CACHE] Stack trace:', error instanceof Error ? error.stack : 'No stack trace')
     // Non-critical, continue without cache
   }
 }
