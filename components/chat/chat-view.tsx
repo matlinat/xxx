@@ -59,14 +59,20 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const [walletBalance, setWalletBalance] = React.useState<number | null>(null)
   const router = useRouter()
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
+  const isInitialLoadRef = React.useRef(true)
 
   const handleBack = () => {
     router.push('/home/chat')
   }
 
   // Auto-scroll zur neuesten Nachricht
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  const scrollToBottom = (instant = false) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: instant ? "auto" : "smooth",
+        block: "end"
+      })
+    }
   }
 
   // Load chat info and messages
@@ -102,6 +108,12 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         if (messagesResult.success && messagesResult.messages) {
           const uiMessages = messagesResult.messages.map(convertToUIMessage)
           setMessages(uiMessages)
+          
+          // Scroll to bottom after initial load (instant, no animation)
+          setTimeout(() => {
+            scrollToBottom(true)
+            isInitialLoadRef.current = false
+          }, 100)
         }
 
         // Mark as read
@@ -184,10 +196,13 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     console.log('[ChatView] 👥 Typing users changed:', typingUsers)
   }, [typingUsers])
 
-  // Scroll beim Laden und bei neuen Nachrichten
+  // Scroll bei neuen Nachrichten (smooth, nicht beim initialen Laden)
   React.useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    if (!isInitialLoadRef.current && messages.length > 0) {
+      // Smooth scroll bei neuen Nachrichten
+      setTimeout(() => scrollToBottom(false), 100)
+    }
+  }, [messages.length])
 
   const handleSend = async (messageText: string) => {
     if (!messageText.trim() || isSending) return
