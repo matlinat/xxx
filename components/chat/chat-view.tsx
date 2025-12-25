@@ -81,6 +81,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const router = useRouter()
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
   const isInitialLoadRef = React.useRef(true)
+  const scrollTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
   // Combine real and optimistic messages for display
   const displayMessages = React.useMemo(() => {
@@ -93,18 +94,26 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     router.push('/home/chat')
   }
 
-  // Auto-scroll zur neuesten Nachricht
-  const scrollToBottom = (instant = false) => {
+  // Auto-scroll zur neuesten Nachricht (robust mit Retry)
+  const scrollToBottom = React.useCallback((instant = false, retry = 0) => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ 
         behavior: instant ? "auto" : "smooth",
         block: "end"
       })
+    } else if (retry < 3) {
+      // Retry wenn DOM noch nicht ready ist
+      scrollTimeoutRef.current = setTimeout(() => {
+        scrollToBottom(instant, retry + 1)
+      }, 50)
     }
-  }
+  }, [])
 
   // Load chat info and messages - CACHE-FIRST: Instant from IndexedDB, sync in background
   React.useEffect(() => {
+    // Reset initial load flag when chat changes
+    isInitialLoadRef.current = true
+    
     async function loadChat() {
       const clientPerfStart = performance.now()
       setIsLoading(true)
@@ -122,11 +131,8 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
           setMessages(uiMessages)
           setIsLoading(false) // UI ready!
           
-          // Scroll to bottom
-          setTimeout(() => {
-            scrollToBottom(true)
-            isInitialLoadRef.current = false
-          }, 50)
+          // Scroll to bottom instantly (with retry)
+          scrollToBottom(true)
         }
         
         // STEP 2: Check if cache is stale
@@ -179,6 +185,12 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
             // Update UI if different
             const uiMessages = result.messages.map(convertToUIMessage)
             setMessages(uiMessages)
+            
+            // Scroll to bottom after server messages load
+            if (cachedMessages.length === 0) {
+              // First load (no cache), scroll instantly
+              scrollToBottom(true)
+            }
           }
 
           // Set wallet balance
@@ -334,13 +346,43 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   }, [sendTypingEvent, chatInfo?.name])
 
 
-  // Scroll bei neuen Nachrichten (smooth, nicht beim initialen Laden)
+  // Scroll to bottom when messages change
   React.useEffect(() => {
-    if (!isInitialLoadRef.current && displayMessages.length > 0) {
-      // Smooth scroll bei neuen Nachrichten
-      setTimeout(() => scrollToBottom(false), 100)
+    if (displayMessages.length > 0) {
+      if (isInitialLoadRef.current) {
+        // Initial load: instant scroll (with small delay for animations)
+        setTimeout(() => {
+          scrollToBottom(true)
+        }, 100)
+        // Mark initial load as done after a short delay
+        setTimeout(() => {
+          isInitialLoadRef.current = false
+        }, 500)
+      } else {
+        // Subsequent updates: smooth scroll
+        scrollToBottom(false)
+      }
     }
-  }, [displayMessages.length])
+  }, [displayMessages.length, scrollToBottom])
+  
+  // Force scroll to bottom when loading completes
+  React.useEffect(() => {
+    if (!isLoading && displayMessages.length > 0) {
+      // Ensure scroll after loading is done (handles edge cases)
+      setTimeout(() => {
+        scrollToBottom(true)
+      }, 150)
+    }
+  }, [isLoading, scrollToBottom])
+  
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleSend = async (messageText: string) => {
     if (!messageText.trim() || isSending || !currentUserId) return
