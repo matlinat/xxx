@@ -161,8 +161,9 @@ export async function getTypingUsers(
       }
       
       try {
-        const data = JSON.parse(dataStr)
-        console.log('[Redis] 📝 Parsed data for user', userId, ':', data)
+        // Upstash HGETALL returns objects directly, not JSON strings
+        const data = typeof dataStr === 'string' ? JSON.parse(dataStr) : dataStr
+        console.log('[Redis] 📝 Data for user', userId, ':', data)
         
         // Check if expired
         if (data.expiresAt < now) {
@@ -174,8 +175,8 @@ export async function getTypingUsers(
         console.log('[Redis] ✅ Active typing user:', data.userName)
         typingUsers.push(data.userName)
       } catch (error) {
-        // Invalid JSON, mark for cleanup
-        console.log('[Redis] ❌ Invalid JSON for user:', userId, error)
+        // Invalid data, mark for cleanup
+        console.log('[Redis] ❌ Invalid data for user:', userId, error)
         expiredKeys.push(userId)
       }
     }
