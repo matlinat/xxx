@@ -15,7 +15,6 @@ import { ChatInput } from "./chat-input"
 import { type Message, getInitials } from "./chat-utils"
 import { useRouter } from "next/navigation"
 import {
-  loadChatWithAllDataAction,
   sendTextMessageAction,
   markAsReadAction,
 } from "@/app/home/chat/actions"
@@ -79,11 +78,12 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       const clientPerfStart = performance.now()
       setIsLoading(true)
       try {
-        // Load all data in parallel (chat, messages, wallet) in ONE request
+        // Load all data via API Route (MUCH faster than Server Actions!)
         const actionStart = performance.now()
-        const result = await loadChatWithAllDataAction(chatId)
+        const response = await fetch(`/api/chat/${chatId}/data`)
+        const result = await response.json()
         const networkTime = Math.round(performance.now() - actionStart)
-        console.log(`[PERF CLIENT] 🌐 Network request (total): ${networkTime}ms`)
+        console.log(`[PERF CLIENT] 🌐 API request (total): ${networkTime}ms`)
         
         // Log server-side performance breakdown
         if (result._perf) {
@@ -92,7 +92,8 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
           console.log(`[PERF SERVER] ⚡ Parallel queries: ${result._perf.parallelQueries}ms`)
           console.log(`[PERF SERVER] 👤 Profile fetch: ${result._perf.profileFetch}ms`)
           console.log(`[PERF SERVER] ✅ Server total: ${result._perf.total}ms`)
-          console.log(`[PERF NETWORK] 🌍 Network overhead: ${networkTime - result._perf.total}ms`)
+          const overhead = networkTime - result._perf.total
+          console.log(`[PERF NETWORK] 🌍 Network + Serialization: ${overhead}ms ${overhead > 500 ? '🚨 HIGH!' : '✅'}`)
         }
         
         if (!result.success || !result.chat) {
