@@ -25,6 +25,16 @@ import { useChatSubscription, type RealtimeMessage } from "@/hooks/use-chat-subs
 import { useTypingIndicator } from "@/hooks/use-typing-indicator"
 import { usePresence } from "@/hooks/use-presence"
 import { formatRelativeTime } from "./chat-utils"
+import { 
+  getCachedMessagesSafe, 
+  cacheMessagesSafe, 
+  isCacheStale, 
+  syncNewMessagesFromServer,
+  logCacheMetrics,
+  type CacheMetrics
+} from "@/lib/indexeddb/chat-cache"
+// Initialize background sync
+import "@/lib/indexeddb/background-sync"
 
 interface ChatViewProps {
   chatId: string
@@ -85,67 +95,134 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     }
   }
 
-  // Load chat info and messages - OPTIMIZED: Single request with parallel queries
+  // Load chat info and messages - CACHE-FIRST: Instant from IndexedDB, sync in background
   React.useEffect(() => {
     async function loadChat() {
       const clientPerfStart = performance.now()
       setIsLoading(true)
+      
       try {
-        // Load all data via API Route (MUCH faster than Server Actions!)
-        const actionStart = performance.now()
-        const response = await fetch(`/api/chat/${chatId}/data`)
-        const result = await response.json()
-        const networkTime = Math.round(performance.now() - actionStart)
-        console.log(`[PERF CLIENT] 🌐 API request (total): ${networkTime}ms`)
+        // STEP 1: Load from cache INSTANTLY
+        const cacheStart = performance.now()
+        const cachedMessages = await getCachedMessagesSafe(chatId, 50)
+        const cacheTime = performance.now() - cacheStart
+        console.log(`[CACHE] ⚡ Loaded from cache: ${cacheTime.toFixed(0)}ms`)
         
-        // Log server-side performance breakdown
-        if (result._perf) {
-          console.log(`[PERF SERVER] 🔐 Auth: ${result._perf.auth}ms`)
-          console.log(`[PERF SERVER] 🔒 Access check: ${result._perf.accessCheck}ms`)
-          console.log(`[PERF SERVER] 💬 Chat fetch: ${result._perf.chatFetch}ms`)
-          console.log(`[PERF SERVER] ⚡ Parallel queries (messages + wallet + profile): ${result._perf.parallelQueries}ms`)
-          console.log(`[PERF SERVER] ✅ Server total: ${result._perf.total}ms`)
-          const overhead = networkTime - result._perf.total
-          console.log(`[PERF NETWORK] 🌍 Network + Serialization: ${overhead}ms ${overhead > 500 ? '🚨 HIGH!' : overhead > 200 ? '🟡' : '✅'}`)
-        }
-        
-        if (!result.success || !result.chat) {
-          toast.error(result.error || "Chat nicht gefunden")
-          router.push('/home/chat')
-          return
-        }
-
-        // Set current user ID
-        if (result.currentUserId) {
-          setCurrentUserId(result.currentUserId)
-        }
-
-        // Set chat info
-        setChatInfo({
-          id: result.chat.otherUser.id,
-          name: result.chat.otherUser.name,
-          avatar: result.chat.otherUser.avatar_url,
-          username: result.chat.otherUser.username,
-        })
-
-        // Set messages
-        if (result.messages) {
-          const uiMessages = result.messages.map(convertToUIMessage)
+        if (cachedMessages.length > 0) {
+          // Show cached messages immediately
+          const uiMessages = cachedMessages.map(convertToUIMessage)
           setMessages(uiMessages)
+          setIsLoading(false) // UI ready!
           
-          // Scroll to bottom after initial load (instant, no animation)
+          // Scroll to bottom
           setTimeout(() => {
             scrollToBottom(true)
             isInitialLoadRef.current = false
-          }, 100)
+          }, 50)
         }
+        
+        // STEP 2: Check if cache is stale
+        const isStale = await isCacheStale(chatId, 5 * 60 * 1000) // 5 min
+        
+        let serverSyncTime = 0
+        let cacheHit = cachedMessages.length > 0
+        
+        if (isStale || cachedMessages.length === 0) {
+          // STEP 3: Sync with server in background
+          const syncStart = performance.now()
+          const response = await fetch(`/api/chat/${chatId}/data`)
+          const result = await response.json()
+          serverSyncTime = performance.now() - syncStart
+          console.log(`[CACHE] 🔄 Server sync: ${serverSyncTime.toFixed(0)}ms`)
+          
+          // Log server-side performance breakdown
+          if (result._perf) {
+            console.log(`[PERF SERVER] 🔐 Auth: ${result._perf.auth}ms`)
+            console.log(`[PERF SERVER] 🔒 Access check: ${result._perf.accessCheck}ms`)
+            console.log(`[PERF SERVER] 💬 Chat fetch: ${result._perf.chatFetch}ms`)
+            console.log(`[PERF SERVER] ⚡ Parallel queries (messages + wallet + profile): ${result._perf.parallelQueries}ms`)
+            console.log(`[PERF SERVER] ✅ Server total: ${result._perf.total}ms`)
+          }
+          
+          if (!result.success || !result.chat) {
+            toast.error(result.error || "Chat nicht gefunden")
+            router.push('/home/chat')
+            return
+          }
 
-        // Set wallet balance
-        if (result.walletBalance !== undefined) {
-          setWalletBalance(result.walletBalance)
+          // Set current user ID
+          if (result.currentUserId) {
+            setCurrentUserId(result.currentUserId)
+          }
+
+          // Set chat info
+          setChatInfo({
+            id: result.chat.otherUser.id,
+            name: result.chat.otherUser.name,
+            avatar: result.chat.otherUser.avatar_url,
+            username: result.chat.otherUser.username,
+          })
+
+          // Set messages
+          if (result.messages) {
+            // Update cache
+            await cacheMessagesSafe(chatId, result.messages)
+            
+            // Update UI if different
+            const uiMessages = result.messages.map(convertToUIMessage)
+            setMessages(uiMessages)
+          }
+
+          // Set wallet balance
+          if (result.walletBalance !== undefined) {
+            setWalletBalance(result.walletBalance)
+          }
+        } else {
+          // Cache is fresh, only sync new messages incrementally
+          const syncStart = performance.now()
+          const newMessages = await syncNewMessagesFromServer(chatId)
+          serverSyncTime = performance.now() - syncStart
+          
+          if (newMessages.length > 0) {
+            console.log(`[CACHE] 🔄 Incremental sync: ${newMessages.length} new messages in ${serverSyncTime.toFixed(0)}ms`)
+            const uiMessages = newMessages.map(convertToUIMessage)
+            setMessages(prev => [...prev, ...uiMessages])
+          }
+          
+          // Still need to fetch chat info and wallet balance
+          const response = await fetch(`/api/chat/${chatId}/data`)
+          const result = await response.json()
+          
+          if (result.success && result.chat) {
+            if (result.currentUserId) {
+              setCurrentUserId(result.currentUserId)
+            }
+            
+            setChatInfo({
+              id: result.chat.otherUser.id,
+              name: result.chat.otherUser.name,
+              avatar: result.chat.otherUser.avatar_url,
+              username: result.chat.otherUser.username,
+            })
+            
+            if (result.walletBalance !== undefined) {
+              setWalletBalance(result.walletBalance)
+            }
+          }
         }
-
-        console.log(`[PERF CLIENT] ✅ TOTAL (including UI updates): ${(performance.now() - clientPerfStart).toFixed(0)}ms`)
+        
+        // Log cache metrics
+        const totalTime = performance.now() - clientPerfStart
+        const metrics: CacheMetrics = {
+          cacheHit: cacheHit,
+          cacheLoadTime: cacheTime,
+          serverSyncTime: serverSyncTime,
+          totalTime: totalTime,
+          messageCount: cachedMessages.length || 0
+        }
+        logCacheMetrics(metrics)
+        
+        console.log(`[CACHE] ✅ TOTAL: ${totalTime.toFixed(0)}ms`)
       } catch (error) {
         console.error("Error loading chat:", error)
         toast.error("Fehler beim Laden des Chats")
@@ -210,6 +287,10 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         },
       }
 
+      // Cache the new message
+      await cacheMessagesSafe(chatId, [messageWithSender])
+      
+      // Update UI
       const uiMessage = convertToUIMessage(messageWithSender)
       setMessages((prev) => [...prev, uiMessage])
 

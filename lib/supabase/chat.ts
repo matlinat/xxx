@@ -245,10 +245,11 @@ export async function getChatMessages(
     limit?: number
     offset?: number
     beforeTimestamp?: string
+    afterTimestamp?: string // NEW: for incremental sync
   } = {}
 ): Promise<ChatMessageWithSender[]> {
   const supabase = await createClient()
-  const { limit = 50, offset = 0, beforeTimestamp } = options
+  const { limit = 50, offset = 0, beforeTimestamp, afterTimestamp } = options
 
   let query = supabase
     .from('chat_messages')
@@ -259,6 +260,10 @@ export async function getChatMessages(
 
   if (beforeTimestamp) {
     query = query.lt('created_at', beforeTimestamp)
+  }
+  
+  if (afterTimestamp) {
+    query = query.gt('created_at', afterTimestamp)
   }
 
   const { data: messages, error } = await query
