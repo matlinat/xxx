@@ -89,11 +89,11 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         if (result._perf) {
           console.log(`[PERF SERVER] 🔐 Auth: ${result._perf.auth}ms`)
           console.log(`[PERF SERVER] 🔒 Access check: ${result._perf.accessCheck}ms`)
-          console.log(`[PERF SERVER] ⚡ Parallel queries: ${result._perf.parallelQueries}ms`)
-          console.log(`[PERF SERVER] 👤 Profile fetch: ${result._perf.profileFetch}ms`)
+          console.log(`[PERF SERVER] 💬 Chat fetch: ${result._perf.chatFetch}ms`)
+          console.log(`[PERF SERVER] ⚡ Parallel queries (messages + wallet + profile): ${result._perf.parallelQueries}ms`)
           console.log(`[PERF SERVER] ✅ Server total: ${result._perf.total}ms`)
           const overhead = networkTime - result._perf.total
-          console.log(`[PERF NETWORK] 🌍 Network + Serialization: ${overhead}ms ${overhead > 500 ? '🚨 HIGH!' : '✅'}`)
+          console.log(`[PERF NETWORK] 🌍 Network + Serialization: ${overhead}ms ${overhead > 500 ? '🚨 HIGH!' : overhead > 200 ? '🟡' : '✅'}`)
         }
         
         if (!result.success || !result.chat) {

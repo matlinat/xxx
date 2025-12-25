@@ -45,14 +45,10 @@ export async function GET(
       )
     }
 
-    // Load data in parallel
-    const parallelStart = performance.now()
-    const [chat, messages, walletBalance] = await Promise.all([
-      getChatById(chatId),
-      getChatMessages(chatId),
-      getWalletBalance(user.id),
-    ])
-    perfMetrics.parallelQueries = Math.round(performance.now() - parallelStart)
+    // Step 1: Get chat info first (needed for otherUserId)
+    const chatStart = performance.now()
+    const chat = await getChatById(chatId)
+    perfMetrics.chatFetch = Math.round(performance.now() - chatStart)
 
     if (!chat) {
       return NextResponse.json(
@@ -61,16 +57,21 @@ export async function GET(
       )
     }
 
-    // Get other user's profile
-    const profileStart = performance.now()
     const otherUserId = chat.creator_id === user.id ? chat.subscriber_id : chat.creator_id
 
-    const { data: profile } = await supabase
-      .from('creator_profiles')
-      .select('user_id, display_name, avatar_url, username')
-      .eq('user_id', otherUserId)
-      .single()
-    perfMetrics.profileFetch = Math.round(performance.now() - profileStart)
+    // Step 2: Load everything else in parallel (now we know otherUserId)
+    const parallelStart = performance.now()
+    const [messages, walletBalance, profile] = await Promise.all([
+      getChatMessages(chatId),
+      getWalletBalance(user.id),
+      supabase
+        .from('creator_profiles')
+        .select('user_id, display_name, avatar_url, username')
+        .eq('user_id', otherUserId)
+        .single()
+        .then(res => res.data),
+    ])
+    perfMetrics.parallelQueries = Math.round(performance.now() - parallelStart)
 
     // Mark as read (fire and forget)
     markMessagesAsRead(chatId, user.id).catch(console.error)
@@ -104,4 +105,3 @@ export async function GET(
     )
   }
 }
-
