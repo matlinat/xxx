@@ -48,12 +48,8 @@ export function ChatInput({ onSend, onTyping, className, disabled = false }: Cha
     const newMessage = e.target.value
     setMessage(newMessage)
 
-    console.log('[ChatInput] Input changed:', { hasOnTyping: !!onTyping, hasText: !!newMessage.trim() })
-
     // Send typing event with debounce
     if (onTyping && newMessage.trim()) {
-      console.log('[ChatInput] ✍️ Sending typing event...')
-      
       // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current)
@@ -64,7 +60,6 @@ export function ChatInput({ onSend, onTyping, className, disabled = false }: Cha
 
       // Set new timeout to stop sending if user stops typing
       typingTimeoutRef.current = setTimeout(() => {
-        console.log('[ChatInput] ⏱️ Typing timeout cleared')
         typingTimeoutRef.current = null
       }, 3000)
     }

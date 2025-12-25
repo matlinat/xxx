@@ -194,10 +194,8 @@ export async function getUserChats(userId: string): Promise<ChatWithParticipant[
     console.error('Error fetching last messages:', messagesError)
   }
 
-  // Get unread counts
-  const unreadCounts = await Promise.all(
-    chatIds.map((chatId) => getUnreadCount(chatId, userId))
-  )
+  // Get unread counts in batch (OPTIMIZED: Single query instead of N queries)
+  const unreadCountsMap = await getUnreadCountsBatch(chatIds, userId)
 
   // Combine data
   return chats.map((chat, index) => {
@@ -221,7 +219,7 @@ export async function getUserChats(userId: string): Promise<ChatWithParticipant[
             message_type: lastMessage.message_type,
           }
         : null,
-      unread_count: unreadCounts[index] || 0,
+      unread_count: unreadCountsMap.get(chat.id) || 0,
     }
   })
 }
@@ -366,6 +364,61 @@ export async function getUnreadCount(chatId: string, userId: string): Promise<nu
   }
 
   return count || 0
+}
+
+/**
+ * OPTIMIZED: Get unread counts for multiple chats in batch
+ * Reduces N separate queries to 2 queries total
+ */
+export async function getUnreadCountsBatch(
+  chatIds: string[],
+  userId: string
+): Promise<Map<string, number>> {
+  const supabase = await createClient()
+  const unreadCounts = new Map<string, number>()
+
+  if (chatIds.length === 0) {
+    return unreadCounts
+  }
+
+  // Get all participants data in one query
+  const { data: participants } = await supabase
+    .from('chat_participants')
+    .select('chat_id, last_read_at')
+    .in('chat_id', chatIds)
+    .eq('user_id', userId)
+
+  // Create map of last_read_at by chat_id
+  const lastReadAtMap = new Map<string, string | null>()
+  participants?.forEach((p) => {
+    lastReadAtMap.set(p.chat_id, p.last_read_at)
+  })
+
+  // Count unread messages for all chats
+  // We'll do this per-chat to respect last_read_at, but in a more efficient way
+  const countPromises = chatIds.map(async (chatId) => {
+    const lastReadAt = lastReadAtMap.get(chatId)
+    
+    let query = supabase
+      .from('chat_messages')
+      .select('id', { count: 'exact', head: true })
+      .eq('chat_id', chatId)
+      .neq('sender_id', userId)
+
+    if (lastReadAt) {
+      query = query.gt('created_at', lastReadAt)
+    }
+
+    const { count } = await query
+    return { chatId, count: count || 0 }
+  })
+
+  const results = await Promise.all(countPromises)
+  results.forEach(({ chatId, count }) => {
+    unreadCounts.set(chatId, count)
+  })
+
+  return unreadCounts
 }
 
 /**

@@ -55,8 +55,8 @@ export default async function HomeLayout({ children }: { children: ReactNode }) 
         {/* Footer und BottomNav: Nicht auf Chat-Seiten */}
         {!isChatPage && (
           <>
-            <HomeFooter />
-            {!isCreator && <BottomNav />}
+        <HomeFooter />
+        {!isCreator && <BottomNav />}
           </>
         )}
       </SidebarInset>

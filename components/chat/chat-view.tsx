@@ -15,11 +15,8 @@ import { ChatInput } from "./chat-input"
 import { type Message, getInitials } from "./chat-utils"
 import { useRouter } from "next/navigation"
 import {
-  loadChatByIdAction,
-  loadChatHistoryAction,
+  loadChatWithAllDataAction,
   sendTextMessageAction,
-  markAsReadAction,
-  getWalletBalanceAction,
 } from "@/app/home/chat/actions"
 import { toast } from "sonner"
 import type { ChatMessageWithSender } from "@/lib/supabase/chat"
@@ -75,38 +72,36 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     }
   }
 
-  // Load chat info and messages
+  // Load chat info and messages - OPTIMIZED: Single request with parallel queries
   React.useEffect(() => {
     async function loadChat() {
       setIsLoading(true)
       try {
-        // Get current user ID for realtime filtering
-        const { createClient } = await import("@/lib/supabase/client")
-        const supabase = createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          setCurrentUserId(user.id)
-        }
-
-        // Load chat info
-        const chatResult = await loadChatByIdAction(chatId)
-        if (!chatResult.success || !chatResult.chat) {
-          toast.error(chatResult.error || "Chat nicht gefunden")
+        // Load all data in parallel (chat, messages, wallet) in ONE request
+        const result = await loadChatWithAllDataAction(chatId)
+        
+        if (!result.success || !result.chat) {
+          toast.error(result.error || "Chat nicht gefunden")
           router.push('/home/chat')
           return
         }
 
+        // Set current user ID
+        if (result.currentUserId) {
+          setCurrentUserId(result.currentUserId)
+        }
+
+        // Set chat info
         setChatInfo({
-          id: chatResult.chat.otherUser.id,
-          name: chatResult.chat.otherUser.name,
-          avatar: chatResult.chat.otherUser.avatar_url,
-          username: chatResult.chat.otherUser.username,
+          id: result.chat.otherUser.id,
+          name: result.chat.otherUser.name,
+          avatar: result.chat.otherUser.avatar_url,
+          username: result.chat.otherUser.username,
         })
 
-        // Load messages
-        const messagesResult = await loadChatHistoryAction(chatId)
-        if (messagesResult.success && messagesResult.messages) {
-          const uiMessages = messagesResult.messages.map(convertToUIMessage)
+        // Set messages
+        if (result.messages) {
+          const uiMessages = result.messages.map(convertToUIMessage)
           setMessages(uiMessages)
           
           // Scroll to bottom after initial load (instant, no animation)
@@ -116,13 +111,9 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
           }, 100)
         }
 
-        // Mark as read
-        await markAsReadAction(chatId)
-
-        // Load wallet balance
-        const balanceResult = await getWalletBalanceAction()
-        if (balanceResult.success && balanceResult.balance !== undefined) {
-          setWalletBalance(balanceResult.balance)
+        // Set wallet balance
+        if (result.walletBalance !== undefined) {
+          setWalletBalance(result.walletBalance)
         }
       } catch (error) {
         console.error("Error loading chat:", error)
@@ -191,10 +182,6 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     enabled: !isLoading && !!currentUserId,
   })
 
-  // Debug: Log typing users changes
-  React.useEffect(() => {
-    console.log('[ChatView] 👥 Typing users changed:', typingUsers)
-  }, [typingUsers])
 
   // Scroll bei neuen Nachrichten (smooth, nicht beim initialen Laden)
   React.useEffect(() => {

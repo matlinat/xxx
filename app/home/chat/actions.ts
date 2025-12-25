@@ -149,7 +149,94 @@ export async function loadUserChatsAction(): Promise<{
 }
 
 /**
+ * OPTIMIZED: Load all chat data in parallel (chat info, messages, wallet balance)
+ * Reduces 5-6 sequential requests to 1 request with 3 parallel queries
+ */
+export async function loadChatWithAllDataAction(chatId: string): Promise<{
+  success: boolean
+  chat?: {
+    id: string
+    otherUser: {
+      id: string
+      name: string
+      avatar_url: string | null
+      username: string | null
+    }
+  }
+  messages?: ChatMessageWithSender[]
+  walletBalance?: number
+  currentUserId?: string
+  error?: string
+}> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+
+    if (authError || !user) {
+      return { success: false, error: 'Nicht authentifiziert' }
+    }
+
+    // Verify user has access to this chat
+    const hasAccess = await verifyUserInChat(chatId, user.id)
+    if (!hasAccess) {
+      return { success: false, error: 'Kein Zugriff auf diesen Chat' }
+    }
+
+    // Load all data in parallel for maximum performance
+    const [chat, messages, walletBalance] = await Promise.all([
+      getChatById(chatId),
+      getChatMessages(chatId),
+      getWalletBalance(user.id),
+    ])
+
+    if (!chat) {
+      return { success: false, error: 'Chat nicht gefunden' }
+    }
+
+    // Get other user's info
+    const otherUserId = chat.creator_id === user.id ? chat.subscriber_id : chat.creator_id
+
+    const { data: profile } = await supabase
+      .from('creator_profiles')
+      .select('user_id, display_name, avatar_url, username')
+      .eq('user_id', otherUserId)
+      .single()
+
+    // Mark messages as read asynchronously (fire and forget)
+    markMessagesAsRead(chatId, user.id).catch((err) => 
+      console.error('Error marking messages as read:', err)
+    )
+
+    return {
+      success: true,
+      chat: {
+        id: chat.id,
+        otherUser: {
+          id: otherUserId,
+          name: profile?.display_name || 'Unknown User',
+          avatar_url: profile?.avatar_url || null,
+          username: profile?.username || null,
+        },
+      },
+      messages,
+      walletBalance: walletBalance.balance,
+      currentUserId: user.id,
+    }
+  } catch (error) {
+    console.error('Error in loadChatWithAllDataAction:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+    }
+  }
+}
+
+/**
  * Load chat by ID (with permission check)
+ * @deprecated Use loadChatWithAllDataAction instead for better performance
  */
 export async function loadChatByIdAction(chatId: string): Promise<{
   success: boolean
