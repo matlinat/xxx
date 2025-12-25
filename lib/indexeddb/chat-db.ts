@@ -26,7 +26,9 @@ class ChatDatabase extends Dexie {
     
     // Version 1: Initial schema
     this.version(1).stores({
-      // Compound index [chatId+created_at] for efficient queries
+      // Indexes for efficient queries
+      // chatId index for filtering by chat
+      // Compound index [chatId+created_at] for potential future range queries
       messages: 'id, chatId, sender_id, [chatId+created_at], cachedAt',
       chats: 'chatId'
     })

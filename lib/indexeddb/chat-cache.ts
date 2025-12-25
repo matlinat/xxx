@@ -12,12 +12,16 @@ export async function getCachedMessages(
   chatId: string,
   limit = 50
 ): Promise<CachedMessage[]> {
-  return await chatDB.messages
+  // Filter by chatId (using index), then sort in memory
+  // This is efficient for typical chat sizes (50-1000 messages)
+  const allMessages = await chatDB.messages
     .where('chatId').equals(chatId)
-    .orderBy('[chatId+created_at]')
-    .reverse()
-    .limit(limit)
     .toArray()
+  
+  // Sort by created_at descending (newest first) and limit
+  return allMessages
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, limit)
 }
 
 /**
@@ -90,10 +94,16 @@ export async function getNewMessages(
   const afterMessage = await chatDB.messages.get(afterMessageId)
   if (!afterMessage) return []
   
-  return await chatDB.messages
-    .where('[chatId+created_at]')
-    .above([chatId, afterMessage.created_at])
+  // Get all messages for this chat
+  const allMessages = await chatDB.messages
+    .where('chatId').equals(chatId)
     .toArray()
+  
+  // Filter messages newer than afterMessage
+  const afterTime = new Date(afterMessage.created_at).getTime()
+  return allMessages
+    .filter(msg => new Date(msg.created_at).getTime() > afterTime)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
 }
 
 /**
@@ -148,12 +158,17 @@ export async function loadOlderMessages(
   const beforeMessage = await chatDB.messages.get(beforeMessageId)
   if (!beforeMessage) return []
   
-  return await chatDB.messages
-    .where('[chatId+created_at]')
-    .below([chatId, beforeMessage.created_at])
-    .reverse()
-    .limit(limit)
+  // Get all messages for this chat
+  const allMessages = await chatDB.messages
+    .where('chatId').equals(chatId)
     .toArray()
+  
+  // Filter messages older than beforeMessage and sort
+  const beforeTime = new Date(beforeMessage.created_at).getTime()
+  return allMessages
+    .filter(msg => new Date(msg.created_at).getTime() < beforeTime)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, limit)
 }
 
 /**
@@ -221,12 +236,17 @@ export async function limitCacheSize(
 ): Promise<number> {
   const allMessages = await chatDB.messages
     .where('chatId').equals(chatId)
-    .orderBy('[chatId+created_at]')
     .toArray()
   
   if (allMessages.length <= maxMessages) return 0
   
-  const toDelete = allMessages.slice(0, allMessages.length - maxMessages)
+  // Sort by created_at ascending (oldest first)
+  const sorted = allMessages.sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  )
+  
+  // Delete oldest messages
+  const toDelete = sorted.slice(0, allMessages.length - maxMessages)
   const ids = toDelete.map(m => m.id)
   await chatDB.messages.bulkDelete(ids)
   
