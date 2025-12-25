@@ -128,6 +128,10 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         if (cachedMessages.length > 0) {
           // Show cached messages immediately
           const uiMessages = cachedMessages.map(convertToUIMessage)
+          console.log(`[CACHE] 📋 Showing ${uiMessages.length} cached messages:`, {
+            first: uiMessages[0]?.content?.substring(0, 30),
+            last: uiMessages[uiMessages.length - 1]?.content?.substring(0, 30)
+          })
           setMessages(uiMessages)
           setIsLoading(false) // UI ready!
           
@@ -179,11 +183,14 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
 
           // Set messages
           if (result.messages) {
+            console.log(`[SERVER] 📨 Received ${result.messages.length} messages from server`)
+            
             // Update cache
             await cacheMessagesSafe(chatId, result.messages)
             
             // Update UI if different
             const uiMessages = result.messages.map(convertToUIMessage)
+            console.log(`[SERVER] 📋 Updating UI with ${uiMessages.length} messages`)
             setMessages(uiMessages)
             
             // Scroll to bottom after server messages load
@@ -259,29 +266,37 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   // Realtime subscription
   const handleRealtimeMessage = React.useCallback(
     async (realtimeMsg: RealtimeMessage) => {
-      // Check if message already exists (prevent duplicates)
-      const existsInMessages = messages.some((m) => m.id === realtimeMsg.id)
-      const existsInOptimistic = optimisticMessages.some((m) => 
-        m.isOptimistic && m.content === realtimeMsg.content && 
-        Math.abs(m.timestamp.getTime() - new Date(realtimeMsg.created_at).getTime()) < 5000
-      )
+      console.log('[REALTIME] 📨 New message received:', {
+        id: realtimeMsg.id,
+        sender: realtimeMsg.sender_id,
+        content: realtimeMsg.content?.substring(0, 50),
+        isOwnMessage: realtimeMsg.sender_id === currentUserId
+      })
       
-      if (existsInMessages || existsInOptimistic) {
-        // If it was an optimistic message, remove it
-        if (existsInOptimistic && realtimeMsg.sender_id === currentUserId) {
+      // Check if message already exists by ID (prevent duplicates)
+      const existsInMessages = messages.some((m) => m.id === realtimeMsg.id)
+      
+      if (existsInMessages) {
+        console.log('[REALTIME] ⏭️ Message already exists, skipping')
+        return
+      }
+      
+      // If it's our own message, remove any matching optimistic message
+      if (realtimeMsg.sender_id === currentUserId) {
+        console.log('[REALTIME] 👤 Own message detected')
+        const hasOptimistic = optimisticMessages.some((m) => 
+          m.isOptimistic && m.content === realtimeMsg.content
+        )
+        
+        if (hasOptimistic) {
+          console.log('[REALTIME] 🔄 Removing optimistic message')
           setOptimisticMessages(prev => 
             prev.filter(m => !(m.isOptimistic && m.content === realtimeMsg.content))
           )
         }
-        return
-      }
-
-      // Don't add if it's our own message that we just sent (will be handled by optimistic)
-      if (realtimeMsg.sender_id === currentUserId) {
-        // Remove matching optimistic message
-        setOptimisticMessages(prev => 
-          prev.filter(m => !(m.isOptimistic && m.content === realtimeMsg.content))
-        )
+        
+        // Don't add - message was already added directly after send
+        console.log('[REALTIME] ✅ Skipping (already added after send)')
         return
       }
 
@@ -414,7 +429,26 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
           prev.filter(m => m.id !== tempId)
         )
         
-        // Real message will arrive via Realtime subscription
+        console.log('[SEND] ✅ Message sent successfully:', result.message.id)
+        
+        // Add real message directly (don't wait for Realtime)
+        const realMessage: Message = {
+          id: result.message.id,
+          senderId: result.message.sender_id,
+          type: result.message.message_type as "text" | "video" | "image_gallery",
+          content: result.message.content || "",
+          timestamp: new Date(result.message.created_at),
+          read: !!result.message.read_at,
+          status: 'sent',
+          isOptimistic: false,
+        }
+        setMessages(prev => [...prev, realMessage])
+        console.log('[SEND] 📝 Message added to UI')
+        
+        // Cache the message (result.message already has sender info)
+        await cacheMessagesSafe(chatId, [result.message])
+        console.log('[SEND] 💾 Message cached')
+        
         // Update wallet balance
         if (result.newBalance !== undefined) {
           setWalletBalance(result.newBalance)
