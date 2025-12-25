@@ -104,6 +104,9 @@ export function getTypingChannel(chatId: string): string {
 /**
  * Publish a typing event
  * Uses Redis Hash instead of individual keys (Upstash REST compatible)
+ * 
+ * @deprecated Use Supabase Realtime Broadcast instead
+ * Kept for backward compatibility
  */
 export async function publishTypingEvent(
   chatId: string,
@@ -126,6 +129,9 @@ export async function publishTypingEvent(
 /**
  * Get all users currently typing in a chat
  * Compatible with Upstash REST API (no KEYS command needed)
+ * 
+ * @deprecated Use Supabase Realtime Broadcast instead
+ * Kept for backward compatibility
  */
 export async function getTypingUsers(
   chatId: string,

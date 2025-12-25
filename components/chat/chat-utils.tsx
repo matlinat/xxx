@@ -18,6 +18,8 @@ export interface Chat {
   unreadCount: number
 }
 
+export type MessageStatus = 'sending' | 'sent' | 'delivered' | 'read' | 'failed'
+
 export interface Message {
   id: string
   type: "text" | "video" | "image_gallery"
@@ -28,6 +30,8 @@ export interface Message {
   videoUrl?: string
   videoDuration?: string
   images?: string[]
+  status?: MessageStatus
+  isOptimistic?: boolean
 }
 
 export function formatTimestamp(date: Date): string {
@@ -59,6 +63,24 @@ export function getInitials(name: string): string {
     .join("")
     .toUpperCase()
     .slice(0, 2)
+}
+
+export function formatRelativeTime(date: Date): string {
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'gerade eben'
+  if (diffMins < 60) return `vor ${diffMins} Min`
+  if (diffHours < 24) return `vor ${diffHours} Std`
+  if (diffDays < 7) return `vor ${diffDays} Tagen`
+  
+  return date.toLocaleDateString('de-DE', { 
+    day: '2-digit', 
+    month: '2-digit' 
+  })
 }
 
 // Dummy-Daten Generator

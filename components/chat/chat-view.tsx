@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ChatMessage } from "./chat-message"
 import { ChatInput } from "./chat-input"
-import { type Message, getInitials } from "./chat-utils"
+import { type Message, type MessageStatus, getInitials } from "./chat-utils"
+import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import {
   sendTextMessageAction,
@@ -22,6 +23,8 @@ import { toast } from "sonner"
 import type { ChatMessageWithSender } from "@/lib/supabase/chat"
 import { useChatSubscription, type RealtimeMessage } from "@/hooks/use-chat-subscription"
 import { useTypingIndicator } from "@/hooks/use-typing-indicator"
+import { usePresence } from "@/hooks/use-presence"
+import { formatRelativeTime } from "./chat-utils"
 
 interface ChatViewProps {
   chatId: string
@@ -39,11 +42,14 @@ function convertToUIMessage(dbMessage: ChatMessageWithSender): Message {
     senderId: dbMessage.sender_id,
     videoUrl: dbMessage.message_type === "video" ? dbMessage.media_url || undefined : undefined,
     images: dbMessage.message_type === "image" && dbMessage.media_url ? [dbMessage.media_url] : undefined,
+    status: dbMessage.read_at ? 'read' : 'sent',
+    isOptimistic: false,
   }
 }
 
 export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const [messages, setMessages] = React.useState<Message[]>([])
+  const [optimisticMessages, setOptimisticMessages] = React.useState<Message[]>([])
   const [chatInfo, setChatInfo] = React.useState<{
     id: string
     name: string
@@ -57,6 +63,13 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const router = useRouter()
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
   const isInitialLoadRef = React.useRef(true)
+
+  // Combine real and optimistic messages for display
+  const displayMessages = React.useMemo(() => {
+    return [...messages, ...optimisticMessages].sort(
+      (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+    )
+  }, [messages, optimisticMessages])
 
   const handleBack = () => {
     router.push('/home/chat')
@@ -149,14 +162,31 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   // Realtime subscription
   const handleRealtimeMessage = React.useCallback(
     async (realtimeMsg: RealtimeMessage) => {
-      // Don't add if it's our own message (already added optimistically)
-      if (realtimeMsg.sender_id === currentUserId) {
+      // Check if message already exists (prevent duplicates)
+      const existsInMessages = messages.some((m) => m.id === realtimeMsg.id)
+      const existsInOptimistic = optimisticMessages.some((m) => 
+        m.isOptimistic && m.content === realtimeMsg.content && 
+        Math.abs(m.timestamp.getTime() - new Date(realtimeMsg.created_at).getTime()) < 5000
+      )
+      
+      if (existsInMessages || existsInOptimistic) {
+        // If it was an optimistic message, remove it
+        if (existsInOptimistic && realtimeMsg.sender_id === currentUserId) {
+          setOptimisticMessages(prev => 
+            prev.filter(m => !(m.isOptimistic && m.content === realtimeMsg.content))
+          )
+        }
         return
       }
 
-      // Check if message already exists (prevent duplicates)
-      const exists = messages.some((m) => m.id === realtimeMsg.id)
-      if (exists) return
+      // Don't add if it's our own message that we just sent (will be handled by optimistic)
+      if (realtimeMsg.sender_id === currentUserId) {
+        // Remove matching optimistic message
+        setOptimisticMessages(prev => 
+          prev.filter(m => !(m.isOptimistic && m.content === realtimeMsg.content))
+        )
+        return
+      }
 
       // Load sender profile
       const { createClient } = await import("@/lib/supabase/client")
@@ -186,7 +216,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       // Mark as read
       await markAsReadAction(chatId)
     },
-    [currentUserId, messages, chatId]
+    [currentUserId, messages, optimisticMessages, chatId]
   )
 
   const { isConnected } = useChatSubscription({
@@ -198,36 +228,77 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   const { typingUsers, sendTypingEvent } = useTypingIndicator({
     chatId,
     enabled: !isLoading && !!currentUserId,
+    currentUserId: currentUserId || undefined,
   })
+
+  // Presence system for online/offline status
+  const { isOnline, getLastSeen } = usePresence(chatId, currentUserId || undefined)
+  
+  const otherUserOnline = chatInfo?.id ? isOnline(chatInfo.id) : false
+  const otherUserLastSeen = chatInfo?.id ? getLastSeen(chatInfo.id) : null
+
+  // Handle typing event with userName
+  const handleTyping = React.useCallback(() => {
+    if (chatInfo?.name) {
+      sendTypingEvent(chatInfo.name)
+    }
+  }, [sendTypingEvent, chatInfo?.name])
 
 
   // Scroll bei neuen Nachrichten (smooth, nicht beim initialen Laden)
   React.useEffect(() => {
-    if (!isInitialLoadRef.current && messages.length > 0) {
+    if (!isInitialLoadRef.current && displayMessages.length > 0) {
       // Smooth scroll bei neuen Nachrichten
       setTimeout(() => scrollToBottom(false), 100)
     }
-  }, [messages.length])
+  }, [displayMessages.length])
 
   const handleSend = async (messageText: string) => {
-    if (!messageText.trim() || isSending) return
+    if (!messageText.trim() || isSending || !currentUserId) return
 
+    const tempId = `temp-${Date.now()}-${Math.random()}`
+    
+    // Create optimistic message immediately
+    const optimisticMessage: Message = {
+      id: tempId,
+      senderId: currentUserId,
+      type: 'text',
+      content: messageText.trim(),
+      timestamp: new Date(),
+      read: false,
+      status: 'sending',
+      isOptimistic: true
+    }
+
+    // Add to optimistic state immediately (instant UI update)
+    setOptimisticMessages(prev => [...prev, optimisticMessage])
     setIsSending(true)
+
     try {
-      const result = await sendTextMessageAction(chatId, messageText)
+      const result = await sendTextMessageAction(chatId, messageText.trim())
 
       if (result.success && result.message) {
-        // Add message to UI (optimistic update)
-        const newMessage = convertToUIMessage(result.message)
-        setMessages((prev) => [...prev, newMessage])
-
-        // Update balance
+        // Remove optimistic message
+        setOptimisticMessages(prev => 
+          prev.filter(m => m.id !== tempId)
+        )
+        
+        // Real message will arrive via Realtime subscription
+        // Update wallet balance
         if (result.newBalance !== undefined) {
           setWalletBalance(result.newBalance)
         }
 
         toast.success("Nachricht gesendet (1 Credit abgezogen)")
       } else {
+        // Mark optimistic message as failed
+        setOptimisticMessages(prev =>
+          prev.map(m => m.id === tempId 
+            ? { ...m, status: 'failed' as MessageStatus }
+            : m
+          )
+        )
+
         // Check if it's a rate limit error
         if (result.rateLimitReset) {
           const resetDate = new Date(result.rateLimitReset)
@@ -251,6 +322,13 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         }
       }
     } catch (error) {
+      // Mark optimistic message as failed
+      setOptimisticMessages(prev =>
+        prev.map(m => m.id === tempId 
+          ? { ...m, status: 'failed' as MessageStatus }
+          : m
+        )
+      )
       console.error("Error sending message:", error)
       toast.error("Fehler beim Senden der Nachricht")
     } finally {
@@ -303,9 +381,26 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
           </div>
           <div className="min-w-0 flex-1">
             <h3 className="font-semibold truncate">{chatInfo.name}</h3>
-            {chatInfo.username && (
-              <p className="text-xs text-muted-foreground">@{chatInfo.username}</p>
-            )}
+            <div className="flex items-center gap-1">
+              {chatInfo.username && (
+                <p className="text-xs text-muted-foreground">@{chatInfo.username}</p>
+              )}
+              {/* Online status */}
+              <div className="flex items-center gap-1">
+                <div className={cn(
+                  "h-2 w-2 rounded-full",
+                  otherUserOnline ? "bg-green-500" : "bg-gray-300"
+                )} />
+                <span className="text-xs text-muted-foreground">
+                  {otherUserOnline 
+                    ? "online" 
+                    : otherUserLastSeen 
+                      ? `zuletzt gesehen ${formatRelativeTime(otherUserLastSeen)}`
+                      : "offline"
+                  }
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* Wallet Balance */}
@@ -347,7 +442,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       {/* Messages Area - WhatsApp Style: neueste unten */}
       <div className="flex-1 overflow-y-auto">
         <div className="min-h-full flex flex-col justify-end py-4">
-          {messages.map((message) => (
+          {displayMessages.map((message) => (
             <ChatMessage 
               key={message.id} 
               message={message} 
@@ -382,7 +477,7 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       <div className="border-t border-border flex-shrink-0">
         <ChatInput 
           onSend={handleSend} 
-          onTyping={sendTypingEvent}
+          onTyping={handleTyping}
           disabled={isSending} 
         />
       </div>
