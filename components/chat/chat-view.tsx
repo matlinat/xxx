@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation"
 import {
   loadChatWithAllDataAction,
   sendTextMessageAction,
+  markAsReadAction,
 } from "@/app/home/chat/actions"
 import { toast } from "sonner"
 import type { ChatMessageWithSender } from "@/lib/supabase/chat"
