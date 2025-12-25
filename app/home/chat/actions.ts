@@ -173,8 +173,11 @@ export async function loadChatWithAllDataAction(chatId: string): Promise<{
   walletBalance?: number
   currentUserId?: string
   error?: string
+  _perf?: Record<string, number>
 }> {
   const perfStart = performance.now()
+  const perfMetrics: Record<string, number> = {}
+  
   try {
     const authStart = performance.now()
     const supabase = await createClient()
@@ -182,7 +185,8 @@ export async function loadChatWithAllDataAction(chatId: string): Promise<{
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
-    console.log(`[PERF] 🔐 Auth check: ${(performance.now() - authStart).toFixed(0)}ms`)
+    perfMetrics.auth = Math.round(performance.now() - authStart)
+    console.log(`[PERF SERVER] 🔐 Auth check: ${perfMetrics.auth}ms`)
 
     if (authError || !user) {
       return { success: false, error: 'Nicht authentifiziert' }
@@ -191,7 +195,8 @@ export async function loadChatWithAllDataAction(chatId: string): Promise<{
     // Verify user has access to this chat
     const accessStart = performance.now()
     const hasAccess = await verifyUserInChat(chatId, user.id)
-    console.log(`[PERF] 🔒 Access verification: ${(performance.now() - accessStart).toFixed(0)}ms`)
+    perfMetrics.accessCheck = Math.round(performance.now() - accessStart)
+    console.log(`[PERF SERVER] 🔒 Access verification: ${perfMetrics.accessCheck}ms`)
     if (!hasAccess) {
       return { success: false, error: 'Kein Zugriff auf diesen Chat' }
     }
@@ -203,7 +208,8 @@ export async function loadChatWithAllDataAction(chatId: string): Promise<{
       getChatMessages(chatId),
       getWalletBalance(user.id),
     ])
-    console.log(`[PERF] ⚡ Parallel queries (chat + messages + wallet): ${(performance.now() - parallelStart).toFixed(0)}ms`)
+    perfMetrics.parallelQueries = Math.round(performance.now() - parallelStart)
+    console.log(`[PERF SERVER] ⚡ Parallel queries (chat + messages + wallet): ${perfMetrics.parallelQueries}ms`)
 
     if (!chat) {
       return { success: false, error: 'Chat nicht gefunden' }
@@ -218,14 +224,16 @@ export async function loadChatWithAllDataAction(chatId: string): Promise<{
       .select('user_id, display_name, avatar_url, username')
       .eq('user_id', otherUserId)
       .single()
-    console.log(`[PERF] 👤 Profile fetch: ${(performance.now() - profileStart).toFixed(0)}ms`)
+    perfMetrics.profileFetch = Math.round(performance.now() - profileStart)
+    console.log(`[PERF SERVER] 👤 Profile fetch: ${perfMetrics.profileFetch}ms`)
 
     // Mark messages as read asynchronously (fire and forget)
     markMessagesAsRead(chatId, user.id).catch((err) => 
       console.error('Error marking messages as read:', err)
     )
 
-    console.log(`[PERF] ✅ TOTAL loadChatWithAllData: ${(performance.now() - perfStart).toFixed(0)}ms`)
+    perfMetrics.total = Math.round(performance.now() - perfStart)
+    console.log(`[PERF SERVER] ✅ TOTAL loadChatWithAllData: ${perfMetrics.total}ms`)
 
     return {
       success: true,
@@ -241,6 +249,7 @@ export async function loadChatWithAllDataAction(chatId: string): Promise<{
       messages,
       walletBalance: walletBalance.balance,
       currentUserId: user.id,
+      _perf: perfMetrics,
     }
   } catch (error) {
     console.error('Error in loadChatWithAllDataAction:', error)

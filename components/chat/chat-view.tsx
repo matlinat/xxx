@@ -82,7 +82,18 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         // Load all data in parallel (chat, messages, wallet) in ONE request
         const actionStart = performance.now()
         const result = await loadChatWithAllDataAction(chatId)
-        console.log(`[PERF CLIENT] 🌐 Network request (total): ${(performance.now() - actionStart).toFixed(0)}ms`)
+        const networkTime = Math.round(performance.now() - actionStart)
+        console.log(`[PERF CLIENT] 🌐 Network request (total): ${networkTime}ms`)
+        
+        // Log server-side performance breakdown
+        if (result._perf) {
+          console.log(`[PERF SERVER] 🔐 Auth: ${result._perf.auth}ms`)
+          console.log(`[PERF SERVER] 🔒 Access check: ${result._perf.accessCheck}ms`)
+          console.log(`[PERF SERVER] ⚡ Parallel queries: ${result._perf.parallelQueries}ms`)
+          console.log(`[PERF SERVER] 👤 Profile fetch: ${result._perf.profileFetch}ms`)
+          console.log(`[PERF SERVER] ✅ Server total: ${result._perf.total}ms`)
+          console.log(`[PERF NETWORK] 🌍 Network overhead: ${networkTime - result._perf.total}ms`)
+        }
         
         if (!result.success || !result.chat) {
           toast.error(result.error || "Chat nicht gefunden")
