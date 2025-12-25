@@ -76,10 +76,13 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
   // Load chat info and messages - OPTIMIZED: Single request with parallel queries
   React.useEffect(() => {
     async function loadChat() {
+      const clientPerfStart = performance.now()
       setIsLoading(true)
       try {
         // Load all data in parallel (chat, messages, wallet) in ONE request
+        const actionStart = performance.now()
         const result = await loadChatWithAllDataAction(chatId)
+        console.log(`[PERF CLIENT] 🌐 Network request (total): ${(performance.now() - actionStart).toFixed(0)}ms`)
         
         if (!result.success || !result.chat) {
           toast.error(result.error || "Chat nicht gefunden")
@@ -116,6 +119,8 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
         if (result.walletBalance !== undefined) {
           setWalletBalance(result.walletBalance)
         }
+
+        console.log(`[PERF CLIENT] ✅ TOTAL (including UI updates): ${(performance.now() - clientPerfStart).toFixed(0)}ms`)
       } catch (error) {
         console.error("Error loading chat:", error)
         toast.error("Fehler beim Laden des Chats")

@@ -122,19 +122,25 @@ export async function loadUserChatsAction(): Promise<{
   chats?: ChatWithParticipant[]
   error?: string
 }> {
+  const perfStart = performance.now()
   try {
+    const authStart = performance.now()
     const supabase = await createClient()
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
+    console.log(`[PERF] 🔐 Auth check (Chat List): ${(performance.now() - authStart).toFixed(0)}ms`)
 
     if (authError || !user) {
       return { success: false, error: 'Nicht authentifiziert' }
     }
 
+    const chatsStart = performance.now()
     const chats = await getUserChats(user.id)
+    console.log(`[PERF] 📋 getUserChats (with batch unread counts): ${(performance.now() - chatsStart).toFixed(0)}ms`)
 
+    console.log(`[PERF] ✅ TOTAL loadUserChatsAction: ${(performance.now() - perfStart).toFixed(0)}ms`)
     return {
       success: true,
       chats,
@@ -168,35 +174,43 @@ export async function loadChatWithAllDataAction(chatId: string): Promise<{
   currentUserId?: string
   error?: string
 }> {
+  const perfStart = performance.now()
   try {
+    const authStart = performance.now()
     const supabase = await createClient()
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
+    console.log(`[PERF] 🔐 Auth check: ${(performance.now() - authStart).toFixed(0)}ms`)
 
     if (authError || !user) {
       return { success: false, error: 'Nicht authentifiziert' }
     }
 
     // Verify user has access to this chat
+    const accessStart = performance.now()
     const hasAccess = await verifyUserInChat(chatId, user.id)
+    console.log(`[PERF] 🔒 Access verification: ${(performance.now() - accessStart).toFixed(0)}ms`)
     if (!hasAccess) {
       return { success: false, error: 'Kein Zugriff auf diesen Chat' }
     }
 
     // Load all data in parallel for maximum performance
+    const parallelStart = performance.now()
     const [chat, messages, walletBalance] = await Promise.all([
       getChatById(chatId),
       getChatMessages(chatId),
       getWalletBalance(user.id),
     ])
+    console.log(`[PERF] ⚡ Parallel queries (chat + messages + wallet): ${(performance.now() - parallelStart).toFixed(0)}ms`)
 
     if (!chat) {
       return { success: false, error: 'Chat nicht gefunden' }
     }
 
     // Get other user's info
+    const profileStart = performance.now()
     const otherUserId = chat.creator_id === user.id ? chat.subscriber_id : chat.creator_id
 
     const { data: profile } = await supabase
@@ -204,11 +218,14 @@ export async function loadChatWithAllDataAction(chatId: string): Promise<{
       .select('user_id, display_name, avatar_url, username')
       .eq('user_id', otherUserId)
       .single()
+    console.log(`[PERF] 👤 Profile fetch: ${(performance.now() - profileStart).toFixed(0)}ms`)
 
     // Mark messages as read asynchronously (fire and forget)
     markMessagesAsRead(chatId, user.id).catch((err) => 
       console.error('Error marking messages as read:', err)
     )
+
+    console.log(`[PERF] ✅ TOTAL loadChatWithAllData: ${(performance.now() - perfStart).toFixed(0)}ms`)
 
     return {
       success: true,

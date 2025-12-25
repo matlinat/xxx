@@ -149,14 +149,17 @@ export async function getChatById(chatId: string): Promise<Chat | null> {
  * Get all chats for a user with participant info and last message
  */
 export async function getUserChats(userId: string): Promise<ChatWithParticipant[]> {
+  const perfStart = performance.now()
   const supabase = await createClient()
 
   // Get all chats where user is either creator or subscriber
+  const chatsStart = performance.now()
   const { data: chats, error: chatsError } = await supabase
     .from('chats')
     .select('*')
     .or(`creator_id.eq.${userId},subscriber_id.eq.${userId}`)
     .order('updated_at', { ascending: false })
+  console.log(`[PERF DB] 💬 Fetch chats: ${(performance.now() - chatsStart).toFixed(0)}ms`)
 
   if (chatsError) {
     console.error('Error fetching chats:', chatsError)
@@ -174,31 +177,37 @@ export async function getUserChats(userId: string): Promise<ChatWithParticipant[
   )
 
   // Fetch user profiles
+  const profilesStart = performance.now()
   const { data: profiles, error: profilesError } = await supabase
     .from('creator_profiles')
     .select('user_id, display_name, avatar_url, username')
     .in('user_id', otherUserIds)
+  console.log(`[PERF DB] 👥 Fetch profiles: ${(performance.now() - profilesStart).toFixed(0)}ms`)
 
   if (profilesError) {
     console.error('Error fetching profiles:', profilesError)
   }
 
   // Fetch last message for each chat
+  const messagesStart = performance.now()
   const { data: lastMessages, error: messagesError } = await supabase
     .from('chat_messages')
     .select('chat_id, content, created_at, message_type')
     .in('chat_id', chatIds)
     .order('created_at', { ascending: false })
+  console.log(`[PERF DB] 💬 Fetch last messages: ${(performance.now() - messagesStart).toFixed(0)}ms`)
 
   if (messagesError) {
     console.error('Error fetching last messages:', messagesError)
   }
 
   // Get unread counts in batch (OPTIMIZED: Single query instead of N queries)
+  const unreadStart = performance.now()
   const unreadCountsMap = await getUnreadCountsBatch(chatIds, userId)
+  console.log(`[PERF DB] 🔢 Batch unread counts: ${(performance.now() - unreadStart).toFixed(0)}ms`)
 
   // Combine data
-  return chats.map((chat, index) => {
+  const result = chats.map((chat, index) => {
     const otherUserId = chat.creator_id === userId ? chat.subscriber_id : chat.creator_id
     const profile = profiles?.find((p) => p.user_id === otherUserId)
     const lastMessage = lastMessages?.find((m) => m.chat_id === chat.id)
@@ -222,6 +231,9 @@ export async function getUserChats(userId: string): Promise<ChatWithParticipant[
       unread_count: unreadCountsMap.get(chat.id) || 0,
     }
   })
+
+  console.log(`[PERF DB] ✅ TOTAL getUserChats: ${(performance.now() - perfStart).toFixed(0)}ms`)
+  return result
 }
 
 /**
