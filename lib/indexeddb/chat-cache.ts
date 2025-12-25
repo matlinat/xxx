@@ -130,7 +130,10 @@ export async function syncNewMessagesFromServer(
       return []
     }
     
-    const newMessages = await response.json()
+    const result = await response.json()
+    
+    // Extract messages array from API response
+    const newMessages = result.messages || []
     
     if (newMessages.length > 0) {
       await cacheMessages(chatId, newMessages)
@@ -192,7 +195,10 @@ export async function loadOlderMessagesFromServer(
       return []
     }
     
-    const messages = await response.json()
+    const result = await response.json()
+    
+    // Extract messages array from API response
+    const messages = result.messages || []
     
     if (messages.length > 0) {
       await cacheMessages(chatId, messages)
