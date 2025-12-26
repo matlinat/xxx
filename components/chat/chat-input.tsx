@@ -6,14 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import dynamic from "next/dynamic"
-import { Theme } from "emoji-picker-react"
-
-// Dynamically import emoji picker to avoid SSR issues
-const EmojiPicker = dynamic(
-  () => import("emoji-picker-react").then((mod) => mod.default),
-  { ssr: false }
-)
+import { EmojiPickerComponent } from "@/components/ui/emoji-picker"
 
 interface ChatInputProps {
   onSend: (message: string) => void | Promise<void>
@@ -81,9 +74,14 @@ export function ChatInput({ onSend, onTyping, className, disabled = false }: Cha
     }
   }
 
-  const handleEmojiClick = (emojiData: { emoji: string }) => {
-    setMessage((prev) => prev + emojiData.emoji)
+  const handleEmojiClick = (emoji: string) => {
+    console.log('[EMOJI] Selected emoji:', emoji)
+    setMessage((prev) => prev + emoji)
     setShowEmojiPicker(false)
+    // Focus input after emoji insert
+    setTimeout(() => {
+      inputRef.current?.focus()
+    }, 100)
   }
 
   const handleFileAttach = () => {
@@ -131,14 +129,16 @@ export function ChatInput({ onSend, onTyping, className, disabled = false }: Cha
             <Smile className="size-5" />
           </Button>
           {showEmojiPicker && (
-            <div className="absolute bottom-full right-0 mb-2 z-50">
-              <EmojiPicker
-                onEmojiClick={handleEmojiClick}
-                theme={Theme.LIGHT}
-                width={350}
-                height={400}
+            <>
+              {/* Backdrop to close picker */}
+              <div 
+                className="fixed inset-0 z-[9998]" 
+                onClick={() => setShowEmojiPicker(false)}
               />
-            </div>
+              <div className="absolute bottom-full left-0 mb-2 z-[9999]">
+                <EmojiPickerComponent onEmojiClick={handleEmojiClick} />
+              </div>
+            </>
           )}
         </div>
 

@@ -6,14 +6,7 @@ import StarterKit from "@tiptap/starter-kit"
 import { Bold, Italic, List, Smile } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import dynamic from "next/dynamic"
-import { Theme } from "emoji-picker-react"
-
-// Dynamically import emoji picker to avoid SSR issues
-const EmojiPicker = dynamic(
-  () => import("emoji-picker-react").then((mod) => mod.default),
-  { ssr: false }
-)
+import { EmojiPickerComponent } from "@/components/ui/emoji-picker"
 
 interface VideoDescriptionEditorProps {
   value: string
@@ -107,14 +100,16 @@ export function VideoDescriptionEditor({
             <Smile className="size-4" />
           </Button>
           {showEmojiPicker && (
-            <div className="absolute z-50 top-full left-0 mt-2">
-              <EmojiPicker
-                onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
-                theme={Theme.LIGHT}
-                width={350}
-                height={400}
+            <>
+              {/* Backdrop to close picker */}
+              <div 
+                className="fixed inset-0 z-[9998]" 
+                onClick={() => setShowEmojiPicker(false)}
               />
-            </div>
+              <div className="absolute z-[9999] top-full left-0 mt-2">
+                <EmojiPickerComponent onEmojiClick={insertEmoji} />
+              </div>
+            </>
           )}
         </div>
       </div>

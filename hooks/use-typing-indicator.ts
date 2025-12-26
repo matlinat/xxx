@@ -115,8 +115,15 @@ export function useTypingIndicator({
     }
   }, [chatId, enabled, currentUserId])
 
+  // Manually clear a specific user's typing indicator (when they send a message)
+  const clearTypingUser = useCallback((userId: string) => {
+    setTypingUsers(prev => prev.filter(u => u.userId !== userId))
+  }, [])
+
   return {
     typingUsers: typingUsers.map(u => u.userName),
+    typingUserIds: typingUsers.map(u => u.userId), // Return IDs too for matching
     sendTypingEvent,
+    clearTypingUser,
   }
 }

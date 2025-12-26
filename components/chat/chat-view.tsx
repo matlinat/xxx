@@ -263,6 +263,21 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
     }
   }, [chatId, router])
 
+  // Typing indicator hook (must be before handleRealtimeMessage)
+  const { typingUsers, typingUserIds, sendTypingEvent, clearTypingUser } = useTypingIndicator({
+    chatId,
+    enabled: !isLoading && !!currentUserId,
+    currentUserId: currentUserId || undefined,
+  })
+  
+  // Store typing users in ref for use in callbacks
+  const typingUsersRef = React.useRef(typingUsers)
+  const typingUserIdsRef = React.useRef(typingUserIds)
+  React.useEffect(() => {
+    typingUsersRef.current = typingUsers
+    typingUserIdsRef.current = typingUserIds
+  }, [typingUsers, typingUserIds])
+
   // Realtime subscription
   const handleRealtimeMessage = React.useCallback(
     async (realtimeMsg: RealtimeMessage) => {
@@ -325,26 +340,32 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       // Cache the new message
       await cacheMessagesSafe(chatId, [messageWithSender])
       
+      // Check if sender is currently typing
+      const senderIsTyping = typingUserIdsRef.current.includes(realtimeMsg.sender_id)
+      
+      if (senderIsTyping) {
+        console.log('[REALTIME] ⏳ Sender is typing, clearing indicator first...')
+        // Clear typing indicator for this sender
+        clearTypingUser(realtimeMsg.sender_id)
+        // Small delay to let the indicator fade out
+        await new Promise(resolve => setTimeout(resolve, 200))
+      }
+      
       // Update UI
       const uiMessage = convertToUIMessage(messageWithSender)
       setMessages((prev) => [...prev, uiMessage])
+      console.log('[REALTIME] ✅ Message added to UI')
 
       // Mark as read
       await markAsReadAction(chatId)
     },
-    [currentUserId, messages, optimisticMessages, chatId]
+    [currentUserId, messages, optimisticMessages, chatId, clearTypingUser]
   )
 
   const { isConnected } = useChatSubscription({
     chatId,
     onMessage: handleRealtimeMessage,
     enabled: !isLoading && !!currentUserId,
-  })
-
-  const { typingUsers, sendTypingEvent } = useTypingIndicator({
-    chatId,
-    enabled: !isLoading && !!currentUserId,
-    currentUserId: currentUserId || undefined,
   })
 
   // Presence system for online/offline status
@@ -379,6 +400,17 @@ export function ChatView({ chatId, showBackButton = false }: ChatViewProps) {
       }
     }
   }, [displayMessages.length, scrollToBottom])
+  
+  // Scroll when typing indicator appears/disappears
+  React.useEffect(() => {
+    if (typingUsers.length > 0) {
+      // Typing indicator appeared - scroll to show it
+      console.log('[SCROLL] 💬 Typing indicator appeared, scrolling...')
+      setTimeout(() => {
+        scrollToBottom(false) // Smooth scroll
+      }, 100)
+    }
+  }, [typingUsers.length, scrollToBottom])
   
   // Force scroll to bottom when loading completes
   React.useEffect(() => {
